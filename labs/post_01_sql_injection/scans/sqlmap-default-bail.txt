@@ -1,0 +1,76 @@
+# ============================================================================
+# DAST evidence - the misleading first run  (why default effort is not enough)
+#
+# Command:
+#   sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' --batch
+#
+# Tool: sqlmap 1.10.7  |  Lab DB: SQLite (dev loop)  |  Captured: 2026-07-21
+# Result: sqlmap finds a UNION point, then DISCARDS it as a 'false positive'
+#         and reports the parameter not injectable -- yet the app IS vulnerable.
+#         sqlmap's own advice names the fix: 'Try to increase values for
+#         --level/--risk'. At its default effort level (--level=1 --risk=1) it
+#         is too conservative for this endpoint: the parameter sits inside a
+#         LIKE '%...%' wrapper, the view reflects the search term back (sqlmap
+#         filters reflective values), and malformed probes return HTTP 500 -- a
+#         low-signal, noisy target its default heuristics play safe on.
+#         NOTE: this is NOT about the base value. sqlmap-vulnerable.txt dumps the
+#         flag from the SAME ?q=1 once --level/--risk are raised; the effort
+#         level is the only thing that changes.
+#
+# Normalized for this public repo: local output paths -> <output-dir>/<home>,
+# and the local port 8010 -> the documented 8000. Output is otherwise verbatim.
+# ============================================================================
+
+        ___
+       __H__
+ ___ ___[,]_____ ___ ___  {1.10.7#pip}
+|_ -| . ["]     | .'| . |
+|___|_  [(]_|_|_|__,|  _|
+      |_|V...       |_|   https://sqlmap.org
+
+[!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
+
+[*] starting @ 11:29:54 /2026-07-21/
+
+[11:29:54] [WARNING] using '<output-dir>' as the output directory
+[11:29:54] [INFO] flushing session file
+[11:29:54] [INFO] testing connection to the target URL
+[11:29:54] [INFO] checking if the target is protected by some kind of WAF/IPS
+[11:29:54] [INFO] testing if the target URL content is stable
+[11:29:55] [INFO] target URL content is stable
+[11:29:55] [INFO] testing if GET parameter 'q' is dynamic
+[11:29:55] [INFO] GET parameter 'q' appears to be dynamic
+[11:29:55] [WARNING] reflective value(s) found and filtering out
+[11:29:55] [INFO] heuristic (basic) test shows that GET parameter 'q' might be injectable
+[11:29:55] [INFO] testing for SQL injection on GET parameter 'q'
+[11:29:55] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[11:29:55] [INFO] testing 'Boolean-based blind - Parameter replace (original value)'
+[11:29:55] [INFO] testing 'MySQL >= 5.1 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (EXTRACTVALUE)'
+[11:29:55] [INFO] testing 'PostgreSQL AND error-based - WHERE or HAVING clause'
+[11:29:56] [INFO] testing 'Microsoft SQL Server/Sybase AND error-based - WHERE or HAVING clause (IN)'
+[11:29:56] [INFO] testing 'Oracle AND error-based - WHERE or HAVING clause (XMLType)'
+[11:29:56] [INFO] testing 'H2 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (CAST)'
+[11:29:56] [INFO] testing 'Generic inline queries'
+[11:29:56] [INFO] testing 'PostgreSQL > 8.1 stacked queries (comment)'
+[11:29:56] [INFO] testing 'Microsoft SQL Server/Sybase stacked queries (comment)'
+[11:29:56] [INFO] testing 'Oracle stacked queries (DBMS_PIPE.RECEIVE_MESSAGE - comment)'
+[11:29:56] [INFO] testing 'MySQL >= 5.0.12 AND time-based blind (query SLEEP)'
+[11:29:57] [INFO] testing 'PostgreSQL > 8.1 AND time-based blind'
+[11:29:57] [INFO] testing 'Microsoft SQL Server/Sybase time-based blind (IF)'
+[11:29:57] [INFO] testing 'Oracle AND time-based blind'
+it is recommended to perform only basic UNION tests if there is not at least one other (potential) technique found. Do you want to reduce the number of requests? [Y/n] Y
+[11:29:57] [INFO] testing 'Generic UNION query (NULL) - 1 to 10 columns'
+[11:29:57] [WARNING] using unescaped version of the test because of zero knowledge of the back-end DBMS. You can try to explicitly set it with option '--dbms'
+[11:29:57] [INFO] 'ORDER BY' technique appears to be usable. This should reduce the time needed to find the right number of query columns. Automatically extending the range for current UNION query injection technique test
+[11:29:57] [INFO] target URL appears to have 3 columns in query
+[11:29:57] [WARNING] applying generic concatenation (CONCAT)
+[11:29:57] [INFO] GET parameter 'q' is 'Generic UNION query (NULL) - 1 to 10 columns' injectable
+[11:29:57] [INFO] checking if the injection point on GET parameter 'q' is a false positive
+[11:29:57] [WARNING] false positive or unexploitable injection point detected
+[11:29:57] [WARNING] GET parameter 'q' does not seem to be injectable
+[11:29:57] [CRITICAL] all tested parameters do not appear to be injectable. Try to increase values for '--level'/'--risk' options if you wish to perform more tests. As heuristic test turned out positive you are strongly advised to continue on with the tests. If you suspect that there is some kind of protection mechanism involved (e.g. WAF) maybe you could try to use option '--tamper' (e.g. '--tamper=space2comment') and/or switch '--random-agent'
+[11:29:57] [WARNING] HTTP error codes detected during run:
+500 (Internal Server Error) - 37 times
+
+[*] ending @ 11:29:57 /2026-07-21/
+

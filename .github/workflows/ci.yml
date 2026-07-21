@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  django:
+    name: Django labs (Postgres) — universal gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lab
+          POSTGRES_USER: lab
+          POSTGRES_PASSWORD: lab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt
+      # Every lab's tests.py asserts the exploit succeeds on the vulnerable view
+      # and is blocked on the secure one. This is the proof that holds for EVERY
+      # lab, so it is the gate that must always be green.
+      - name: Run migrations and tests against Postgres
+        env:
+          POSTGRES_HOST: 127.0.0.1
+        run: |
+          python manage.py migrate
+          python manage.py test
+
+  sast:
+    name: SAST — Bandit + Semgrep community
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Pinned. The Semgrep community packs (p/django) are fetched from the
+      # registry, so this job is not hermetic — that is the accepted trade-off
+      # for scanning with the same off-the-shelf rules an analyst runs.
+      - run: pip install "bandit==1.9.4" "semgrep==1.170.0"
+
+      # Post 1 (SQL injection) is a class the standard tools catch, so it carries
+      # a scan-assert: both tools must flag the vulnerable view and stay silent on
+      # the secure one. DAST-only classes (CSRF, access control, …) carry no such
+      # assert — their gate is the Django tests above.
+      - name: Bandit fires on the vulnerable view
+        run: |
+          bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
+          python -c "import json,sys; n=len(json.load(open('bandit_vuln.json'))['results']); print('bandit findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Bandit is silent on the secure view
+        run: |
+          bandit -f json -o bandit_secure.json labs/post_01_sql_injection/views_secure.py || true
+          python -c "import json,sys; n=len(json.load(open('bandit_secure.json'))['results']); print('bandit findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      - name: Semgrep community fires on the vulnerable view
+        run: |
+          semgrep scan --config p/django --json --quiet \
+            labs/post_01_sql_injection/views_vulnerable.py > semgrep_vuln.json
+          python -c "import json,sys; n=len(json.load(open('semgrep_vuln.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Semgrep community is silent on the secure view
+        run: |
+          semgrep scan --config p/django --json --quiet \
+            labs/post_01_sql_injection/views_secure.py > semgrep_secure.json
+          python -c "import json,sys; n=len(json.load(open('semgrep_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
+
+  sca:
+    name: SCA — pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "pip-audit==2.9.0"
+      # Dependency hygiene: fail if a declared dependency has a known CVE. A clean
+      # run is the expected, quiet outcome.
+      - name: Audit declared dependencies
+        run: pip-audit -r requirements.txt

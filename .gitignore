@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+lab.sqlite3
+.env
+.semgrep/
+.semgrepignore
+.pytest_cache/
+staticfiles/
+.DS_Store

@@ -1,0 +1,47 @@
+# ============================================================================
+# SAST evidence - Bandit (also enforced in CI on every commit)
+#
+# Command:
+#   bandit -r labs/post_01_sql_injection/
+#
+# Tool: bandit 1.9.4  |  Captured: 2026-07-21
+# Result: B608 (hardcoded SQL expression) on the vulnerable view, line 26;
+#         the secure view produces no findings.
+# ============================================================================
+
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-07-21 18:38:37.625143+00:00
+
+Test results:
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html
+   Location: labs/post_01_sql_injection/views_vulnerable.py:26:14
+25	        cursor.execute(
+26	            f"SELECT id, title, body FROM sqli_note WHERE title LIKE '%{q}%'"
+27	        )
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 157
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):
