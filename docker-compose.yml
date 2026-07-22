@@ -8,8 +8,10 @@ services:
       POSTGRES_DB: lab
       POSTGRES_USER: lab
       POSTGRES_PASSWORD: lab
-    ports:
-      - "127.0.0.1:5432:5432"
+    # No host port is published: the web container reaches Postgres over the
+    # compose network (POSTGRES_HOST=db), and publishing 5432 would collide with
+    # any local Postgres the developer already runs. If you want to inspect the
+    # lab DB from the host, add:  ports: ["127.0.0.1:5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
