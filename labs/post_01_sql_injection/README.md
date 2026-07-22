@@ -109,6 +109,8 @@ difference.
 
 ### DAST — sqlmap against the booted lab
 
+DAST needs [sqlmap](https://sqlmap.org) (not a project dependency — install it
+once with `pipx install sqlmap`, `pip install sqlmap`, or your distro package).
 Boot the lab (`docker compose up`, or the SQLite dev loop), then point sqlmap at
 the vulnerable endpoint. A naive run is misleading: `?q=1 --batch` finds a UNION
 point, then discards it as a *"false positive"* and reports the parameter not

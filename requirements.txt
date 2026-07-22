@@ -1,2 +1,4 @@
-Django>=5.2,<5.3
-psycopg[binary]>=3.1
+# Pinned for reproducible scans and CI. Bump deliberately, then re-run the labs
+# and refresh scans/ (see the maintenance policy in the series plan / CONTRIBUTING).
+Django==5.2.16
+psycopg[binary]==3.3.4

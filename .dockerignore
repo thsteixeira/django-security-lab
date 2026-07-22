@@ -1,0 +1,27 @@
+# Keep the Docker build context small and portable. Without this, `COPY . .`
+# ships the local virtualenv (a host-specific, often 400MB+ tree) and the dev
+# SQLite database into the image.
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+lab.sqlite3
+
+# Version control and CI config — not needed at runtime.
+.git/
+.github/
+.gitignore
+.gitattributes
+.dockerignore
+
+# Docs and captured evidence — not needed to run the lab.
+*.md
+labs/**/README.md
+labs/**/scans/
+
+# Local tooling caches.
+.semgrep/
+.semgrepignore
+.pytest_cache/
+.env

@@ -73,8 +73,10 @@ semgrep scan --config p/django labs/post_01_sql_injection/
 # SCA — known-CVE audit of the dependencies
 pip-audit -r requirements.txt
 
-# DAST — dynamic scan against the booted lab (see the lab README for the full run)
-sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' --batch
+# DAST — dynamic scan against the booted lab (full walkthrough in the lab README)
+# Note: at default effort sqlmap calls this a false positive; --level/--risk find it.
+sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' \
+       -p q --batch --level=5 --risk=3 --dump -T sqli_flag
 ```
 
 CI runs the Django lab tests (the universal gate) plus Bandit + Semgrep-community
