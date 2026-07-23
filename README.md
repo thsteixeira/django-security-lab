@@ -51,13 +51,10 @@ docker compose up --build          # Postgres + Django on http://127.0.0.1:8000
 Then open `http://127.0.0.1:8000/sql-injection/vulnerable/` and try the exploit
 in that lab's README.
 
-Local, without Docker (SQLite, for a quick look or the fast test loop):
+Run the test suite against that same stack:
 
 ```bash
-python -m venv .venv && . .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -r requirements.txt
-LAB_DB=sqlite python manage.py migrate
-LAB_DB=sqlite python manage.py test
+docker compose run --rm web python manage.py test
 ```
 
 ## Scan the labs with the standard tools
@@ -74,9 +71,8 @@ semgrep scan --config p/django labs/post_01_sql_injection/
 pip-audit -r requirements.txt
 
 # DAST — dynamic scan against the booted lab (full walkthrough in the lab README)
-# Note: at default effort sqlmap calls this a false positive; --level/--risk find it.
 sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' \
-       -p q --batch --level=5 --risk=3 --dump -T sqli_flag
+       -p q --batch --dump -T sqli_flag
 ```
 
 CI runs the Django lab tests (the universal gate) plus Bandit + Semgrep-community

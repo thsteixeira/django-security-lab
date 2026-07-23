@@ -10,9 +10,8 @@ and date.
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ✅ yes | `B608` on the vulnerable view (line 26); nothing on the secure view |
 | [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`) | SAST | ✅ yes | 1 taint finding (`request` → `execute()`) on the vulnerable view; nothing on the secure view |
-| [`sqlmap-vulnerable.txt`](sqlmap-vulnerable.txt) | sqlmap 1.10.7 | DAST | ❌ no | `?q=1` at `--level=5 --risk=3` — injectable three ways (boolean/time-blind + UNION); `sqli_flag` dumped |
-| [`sqlmap-secure.txt`](sqlmap-secure.txt) | sqlmap 1.10.7 | DAST | ❌ no | same settings vs the secure view — "not injectable"; the ORM gives it nothing |
-| [`sqlmap-default-bail.txt`](sqlmap-default-bail.txt) | sqlmap 1.10.7 | DAST | ❌ no | the misleading first run: at default effort, sqlmap discards a real injection as a "false positive" |
+| [`sqlmap-vulnerable.txt`](sqlmap-vulnerable.txt) | sqlmap 1.10.7 | DAST | ❌ no | `?q=1` at **default** effort — injectable four ways (boolean-blind, error-based, stacked queries, time-blind); `sqli_flag` dumped |
+| [`sqlmap-secure.txt`](sqlmap-secure.txt) | sqlmap 1.10.7 | DAST | ❌ no | same command vs the secure view — "not injectable"; the ORM gives it nothing |
 
 ## Why the DAST runs live here
 
@@ -33,25 +32,26 @@ bandit -r labs/post_01_sql_injection/
 semgrep scan --config p/django labs/post_01_sql_injection/
 ```
 
-DAST needs the lab booted (`docker compose up`, or the SQLite dev loop). The
-`sqlmap-default-bail.txt` → `sqlmap-vulnerable.txt` pair is the lesson, and the
-**only** thing that changes between them is the effort level. At its default
-`--level=1 --risk=1`, sqlmap finds a UNION point on `?q=1` and then *discards it
-as a false positive* — this endpoint is a low-signal target (the parameter is
-wrapped in `LIKE '%...%'`, the view reflects the search term, malformed probes
-return HTTP 500). sqlmap's own output names the fix: *"Try to increase values for
-'--level'/'--risk'."* Do that and the **same** `?q=1` is confirmed three ways and
-dumps the flag:
+DAST needs the lab booted (`docker compose up`). Point sqlmap at the vulnerable
+endpoint — no raised effort is needed against Postgres. At its **default**
+`--level=1 --risk=1`, sqlmap fingerprints the DBMS as PostgreSQL and confirms
+`?q=1` injectable four ways (boolean-based blind, error-based, stacked queries,
+and time-based blind), then dumps the flag table the search should never reach:
 
 ```bash
 sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' \
-       -p q --batch --level=5 --risk=3 --dump -T sqli_flag
+       -p q --batch --dump -T sqli_flag
 ```
+
+The **same** command against `/sql-injection/secure/` reports *"all tested
+parameters do not appear to be injectable"* — the ORM parameterises, so sqlmap
+finds nothing. That vulnerable-vs-secure pair, at identical settings, is the
+lesson.
 
 ## A note on normalization
 
-The sqlmap logs were captured on a local dev instance. Two cosmetic
-substitutions were applied for this public repo, disclosed in each file's header:
-absolute local output paths → `<output-dir>` / `<home>`, and the local port
-`8010` → the documented `8000`. Nothing else was changed — the payloads,
+The sqlmap logs were captured against the canonical `docker compose` stack
+(PostgreSQL 16, the app on port `8000`). One cosmetic substitution was applied
+for this public repo, disclosed in each file's header: the absolute local
+`--output-dir` path → `<output-dir>`. Nothing else was changed — the payloads,
 findings, DBMS fingerprint, and dumped flag are verbatim.

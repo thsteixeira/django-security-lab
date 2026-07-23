@@ -3,7 +3,6 @@ venv/
 __pycache__/
 *.pyc
 *.sqlite3
-lab.sqlite3
 .env
 .semgrep/
 .semgrepignore

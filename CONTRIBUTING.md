@@ -83,5 +83,7 @@ When a rule is warranted, add the pair `rules/foo.yaml` + `rules/foo.py`:
 - **Pin tool versions** in CI. The community Semgrep packs are fetched from the
   registry (not hermetic); a custom-rule job, if present, stays hermetic
   (`--config ./rules/` only, no `--config auto` / `p/...`).
-- Keep `tests.py` green on Postgres and the SQLite fast loop; CTF payloads must be
-  portable across both.
+- **Postgres via `docker compose` is the one run path.** Keep `tests.py` green
+  there, write CTF payloads for Postgres semantics, and capture `scans/` evidence
+  against that same stack — the committed output has to match what a reader
+  reproduces.

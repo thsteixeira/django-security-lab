@@ -1,7 +1,8 @@
 """Runnable proof that the vulnerable view leaks the flag and the secure one does not.
 
-Run locally against SQLite:  LAB_DB=sqlite python manage.py test
-Run in CI against Postgres:   python manage.py test
+Postgres is the only supported backend, locally and in CI:
+
+    docker compose run --rm web python manage.py test
 """
 from django.test import Client, TestCase
 

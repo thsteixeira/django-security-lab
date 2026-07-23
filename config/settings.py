@@ -5,9 +5,9 @@ This project is INTENTIONALLY VULNERABLE. Never deploy it to a public host.
 See SECURITY.md. It is meant to run only on a local machine or in CI, bound
 to 127.0.0.1 via docker-compose.
 
-Database: PostgreSQL by default (so SQL injection behaves realistically), read
-from environment variables. Set LAB_DB=sqlite for a dependency-light local
-smoke test (used by the test suite when no Postgres is available).
+Database: PostgreSQL, read from environment variables and served by the
+docker-compose stack. A single backend keeps what you run identical to what CI
+runs and to the scanner output committed under each lab's scans/ directory.
 """
 import os
 from pathlib import Path
@@ -45,24 +45,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-if os.environ.get("LAB_DB") == "sqlite":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "lab.sqlite3",
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "lab"),
+        "USER": os.environ.get("POSTGRES_USER", "lab"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "lab"),
+        "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get("POSTGRES_DB", "lab"),
-            "USER": os.environ.get("POSTGRES_USER", "lab"),
-            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "lab"),
-            "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
-            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-        }
-    }
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
