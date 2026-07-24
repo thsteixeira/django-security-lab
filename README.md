@@ -10,9 +10,10 @@ sqlmap (DAST), pip-audit (SCA) — green in CI on every commit.**
 This is the companion repository for the
 [Django Security Series](https://thiagoteixeira.tech/blog/). Each post explains
 one attack; the matching lab here is the proof you can re-run: a vulnerable view
-and a secure view, plus the exact scanner commands and captured output the post
-quotes. Clone it, boot the lab, point the standard tools at it, and watch them
-flag the vulnerable view and stay silent on the secure one.
+and a secure view, plus the exact commands and captured output the post quotes.
+Clone it, boot the lab, and exercise the vulnerable→secure pair **from the
+command line** — `curl` for the request/response, the standard scanners for
+detection, `manage.py test` as the gate. No browser required.
 
 > ⚠️ **Intentionally vulnerable — never deploy this publicly.** Some modules
 > execute attacker input and produce real RCE. Run it only on localhost or via
@@ -39,6 +40,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | # | Post / topic | Lab | Detection |
 |---|---|---|---|
 | 01 | SQL Injection | [`labs/post_01_sql_injection/`](labs/post_01_sql_injection/) | SAST (Bandit + Semgrep community) · DAST (sqlmap) |
+| 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST scanned, not asserted (the tools don't cleanly split bug from fix) · gate is `tests.py` |
 
 ## Run the labs
 
@@ -48,10 +50,13 @@ Docker + Postgres is the canonical path — what a reader runs matches what CI r
 docker compose up --build          # Postgres + Django on http://127.0.0.1:8000
 ```
 
-Then open `http://127.0.0.1:8000/sql-injection/vulnerable/` and try the exploit
-in that lab's README.
+Each lab's README then walks the vulnerable→secure pair from the command line
+with `curl` — post the payload, read the exploit succeed against `/vulnerable/`,
+read it fail against `/secure/`. Start with
+[`labs/post_01_sql_injection/`](labs/post_01_sql_injection/).
 
-Run the test suite against that same stack:
+Run the test suite against that same stack — the universal gate, and the
+one-command proof for every lab:
 
 ```bash
 docker compose run --rm web python manage.py test
