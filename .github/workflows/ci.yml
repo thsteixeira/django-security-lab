@@ -55,6 +55,12 @@ jobs:
       # a scan-assert: both tools must flag the vulnerable view and stay silent on
       # the secure one. DAST-only classes (CSRF, access control, …) carry no such
       # assert — their gate is the Django tests above.
+      #
+      # Lab 02 (XSS) is deliberately NOT asserted here, and adding an assert would
+      # be a bug, not a fix: Bandit flags mark_safe() on BOTH views (it cannot see
+      # the nh3.clean() inside the secure one) and Semgrep community reports
+      # neither. "Fires on vulnerable, silent on secure" is false for this class,
+      # so Lab 02's gate is its tests.py. See labs/post_02_xss/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true

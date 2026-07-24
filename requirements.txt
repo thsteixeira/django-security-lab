@@ -2,3 +2,6 @@
 # and refresh scans/ (see the maintenance policy in the series plan / CONTRIBUTING).
 Django==5.2.16
 psycopg[binary]==3.3.4
+# Allowlist HTML sanitiser (Rust/Ammonia bindings). Lab 02's secure view runs
+# untrusted comment HTML through it before mark_safe().
+nh3==0.3.6

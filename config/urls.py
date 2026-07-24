@@ -9,6 +9,8 @@ def index(request):
         "<ul>"
         '<li><a href="/sql-injection/vulnerable/?q=test">/sql-injection/vulnerable/</a></li>'
         '<li><a href="/sql-injection/secure/?q=test">/sql-injection/secure/</a></li>'
+        '<li><a href="/xss/vulnerable/">/xss/vulnerable/</a></li>'
+        '<li><a href="/xss/secure/">/xss/secure/</a></li>'
         "</ul>"
     )
 
@@ -16,4 +18,5 @@ def index(request):
 urlpatterns = [
     path("", index),
     path("sql-injection/", include("labs.post_01_sql_injection.urls")),
+    path("xss/", include("labs.post_02_xss.urls")),
 ]

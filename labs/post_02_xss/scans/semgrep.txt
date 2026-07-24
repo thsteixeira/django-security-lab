@@ -1,0 +1,33 @@
+# ============================================================================
+# SAST evidence - Semgrep community rulesets vs Lab 02 (XSS)
+#
+# Command:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_02_xss/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-24
+# Result: ZERO findings, on both views. 156 community rules ran and none of
+#         them models "mark_safe() reached by an unsanitised model field".
+#         Semgrep's taint tracking needs a source it recognises; a value read
+#         off a model instance is not one, so there is no path to follow and
+#         nothing to report. It is not a false negative in the rules' own terms
+#         - the pattern simply is not covered.
+#
+# So the two SAST tools fail in opposite directions on the same code: Bandit
+# flags both the bug and the fix (too coarse - see bandit.txt), Semgrep flags
+# neither. That is why Lab 02 has no CI scan-assert and its gate is tests.py.
+#
+# Verbatim summary; no normalization was needed.
+# ============================================================================
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 15
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 156 rules on 15 files: 0 findings.

