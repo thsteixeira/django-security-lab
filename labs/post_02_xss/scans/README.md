@@ -9,42 +9,56 @@ the exact command, tool version, and capture date.
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ⚠️ scanned, not asserted | `B308` + `B703` on **both** views — it flags the fix as loudly as the bug |
 | [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`, `p/python`, `p/owasp-top-ten`) | SAST | ⚠️ scanned, not asserted | **0 findings** on both views — 156 community rules, none covering this pattern |
+| [`semgrep-custom-rule.txt`](semgrep-custom-rule.txt) | Semgrep 1.170.0 (`rules/xss.yaml`) | SAST | ✅ asserted (hermetic job) | the custom rule fires on the vulnerable view (line 32) and is **silent** on the secure one |
 
-## Why this lab has no scan-assert in CI
+## The standard tools can't tell this bug from its fix — so we wrote a rule
 
 Lab 01 (SQL injection) asserts in CI that the SAST tools **fire on the
-vulnerable view and stay silent on the secure one**. That assertion is a lie
-here, and pretending otherwise would be the easiest way to make this repo
-untrustworthy.
+vulnerable view and stay silent on the secure one**. For XSS-via-`mark_safe`
+neither standard tool can do that, in opposite ways:
 
 **Bandit flags both views.** `B308`/`B703` match the `mark_safe()` call itself.
-It does not look at the argument, so `mark_safe(c.body)` (the bug) and
-`mark_safe(nh3.clean(c.body))` (the recommended fix) are indistinguishable to
-it. The finding on `views_secure.py` is a false positive against code that is
-already correct.
+It never looks at the argument, so `mark_safe(c.body)` (the bug) and
+`mark_safe(nh3.clean(c.body))` (the fix) are indistinguishable to it. The
+finding on `views_secure.py` is a false positive against correct code.
 
-**Semgrep's community rules report nothing at all**, on either view. Its taint
-analysis needs a source it recognises; a value read off a model instance is not
-one, so there is no traceable path from source to sink and nothing to report.
+**Semgrep's community rules report nothing at all**, on either view. Their taint
+analysis follows `request.*`, but the payload here is *stored* (POST → DB → GET
+render), so the source never reaches the sink and there is nothing to report.
 
-So the two tools fail in opposite directions on the same code — one is too
-coarse to tell the bug from the fix, the other does not see it. **The gate for
-this lab is `tests.py`**, which asserts the exploit succeeds on the vulnerable
-view, is neutralised on the secure one, and that legitimate rich text still
-renders. That is the universal gate every lab carries, and here it is the only
-honest one.
+That is exactly the narrow, documented case where a **custom rule** earns its
+place ([`rules/xss.yaml`](../../../rules/xss.yaml), with the stem-paired fixture
+[`rules/xss.py`](../../../rules/xss.py)). It is deliberately syntactic —
+`mark_safe()` on a value that is not a string literal and not an
+`nh3.clean()` / `escape()` / `format_html()` call — so it **fires on the
+vulnerable view and stays silent on the secure one**, the clean scan-assert the
+standard tools couldn't give. `semgrep-custom-rule.txt` is that run; CI enforces
+it in a hermetic job (`semgrep --test` on the fixture, then the fire/silent
+assert on the two views).
 
-This is the empirical result of the detection pass, not a prediction — and a
-lab whose class the standard tools do not cleanly catch is an expected outcome,
-not a defect.
+Its one honest limit, documented in the fixture as `todook`: being syntactic, it
+cannot see sanitisation done one line earlier through a variable
+(`c = nh3.clean(x); mark_safe(c)`). Taint mode would catch that, but it needs a
+source it can trace, and an OSS engine does not resolve a stored model field as
+one. The lab views call `mark_safe()` inline, where the rule is exact.
+
+Alongside the rule, `tests.py` remains the runnable proof of the vulnerability
+itself (exploit succeeds on the vulnerable view, neutralised on the secure one,
+legitimate rich text still renders).
 
 ## Reproducing them
 
 SAST needs no server:
 
 ```bash
+# the standard tools (they can't separate bug from fix here)
 bandit -r labs/post_02_xss/
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_02_xss/
+
+# the custom rule (it can) — fixture check, then the two views
+semgrep --test --config rules/ rules/
+semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py   # 1 finding
+semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py       # 0 findings
 ```
 
 To exercise the vulnerability itself rather than a scanner's opinion of it, boot

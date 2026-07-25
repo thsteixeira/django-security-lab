@@ -1,0 +1,45 @@
+# ============================================================================
+# SAST evidence - the CUSTOM Semgrep rule vs Lab 02 (XSS)  (runs in CI, hermetic)
+#
+# Rule:     rules/xss.yaml  (thiagoteixeira.django.security.xss.mark-safe-without-sanitiser)
+# Fixture:  rules/xss.py    (stem-paired; validated by `semgrep --test`)
+#
+# Commands:
+#   semgrep --test --config rules/ rules/
+#   semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py
+#   semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-24
+# Why this rule exists: the standard tools cannot separate this bug from its fix
+# (see bandit.txt - Bandit flags mark_safe on BOTH views; semgrep.txt - the
+# community rules flag NEITHER). This custom rule is deliberately syntactic:
+# mark_safe() on a non-literal that is not an nh3.clean()/escape()/format_html()
+# call. It fires on the vulnerable view and stays silent on the secure one - the
+# clean vulnerable/secure scan-assert this class otherwise can't have.
+#
+# Verbatim output; no normalization was needed.
+# ============================================================================
+
+$ semgrep --test --config rules/ rules/
+1/1: ✓ All tests passed
+
+$ semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py
+
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+
+    labs/post_02_xss/views_vulnerable.py
+    ❯❱ thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+          mark_safe() is called on a value that is not a literal and has not passed through an allowlist
+          sanitiser (nh3.clean) or an escaper. If any part of that value is user-submitted, this marks
+          attacker HTML safe and switches off Django's autoescaping - a stored/reflected XSS sink. Sanitise
+          first: mark_safe(nh3.clean(value)).
+
+           32┆ f"<li><strong>{escape(c.author)}</strong>: {as_html(mark_safe(c.body))}</li>"
+
+Ran 1 rule on 1 file: 1 finding.
+
+$ semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py
+
+Ran 1 rule on 1 file: 0 findings.

@@ -81,6 +81,37 @@ jobs:
             labs/post_01_sql_injection/views_secure.py > semgrep_secure.json
           python -c "import json,sys; n=len(json.load(open('semgrep_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
 
+  custom-rules:
+    name: Custom Semgrep rules (hermetic) — fixture + lab assert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Hermetic: only the in-repo rules/ are used, nothing is fetched from the
+      # registry. This job exists only because a lab ships a custom rule (Lab 02,
+      # XSS) — the standard tools cannot separate that bug from its fix (Bandit
+      # flags both views, community Semgrep neither). See rules/xss.yaml.
+      - run: pip install "semgrep==1.170.0"
+
+      # 1. Every custom rule matches its stem-paired fixture.
+      - name: Rules pass their fixtures (semgrep --test)
+        run: semgrep --test --config rules/ rules/
+
+      # 2. The XSS rule fires on the vulnerable view and stays silent on the
+      #    secure one — the scan-assert this class otherwise can't have.
+      - name: XSS rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/xss.yaml --json --quiet \
+            labs/post_02_xss/views_vulnerable.py > rule_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: XSS rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/xss.yaml --json --quiet \
+            labs/post_02_xss/views_secure.py > rule_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
   sca:
     name: SCA — pip-audit
     runs-on: ubuntu-latest

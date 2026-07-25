@@ -8,7 +8,7 @@ Companion lab for the blog post
 | **OWASP** | A03:2021 — Injection |
 | **CWE** | CWE-79 — Improper Neutralization of Input During Web Page Generation |
 | **ASVS** | V5.3.3 — context-aware output encoding / sanitisation |
-| **Detection** | SAST scanned, **not asserted** (see below) · gate is `tests.py` |
+| **Detection** | SAST — standard tools can't split bug from fix; a **custom rule** ([`rules/xss.yaml`](../../rules/xss.yaml)) does, asserted in CI (see Scanning it) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -119,14 +119,28 @@ does not drift into CSRF (that is Post 8).
 
 The standard SAST tools do **not** cleanly separate the bug from the fix here —
 Bandit flags `mark_safe()` on **both** views (it cannot see the `nh3.clean()`
-inside the secure one), and the Semgrep community rules report **neither**. So
-this lab carries no SAST scan-assert in CI, and its gate is `tests.py`. The full
-reasoning and the captured runs are in [`scans/`](scans/):
+inside the secure one), and the Semgrep community rules report **neither** (their
+taint follows `request.*`, which never reaches a *stored* sink). That is the
+narrow case where a **custom rule** earns its place:
+[`rules/xss.yaml`](../../rules/xss.yaml), with its stem-paired fixture
+[`rules/xss.py`](../../rules/xss.py). It flags `mark_safe()` on a value that is
+not a literal and not an `nh3.clean()`/`escape()`/`format_html()` call — so it
+fires on the vulnerable view and stays silent on the secure one, the scan-assert
+the standard tools couldn't give. A hermetic CI job runs `semgrep --test` on the
+fixture and then that fire/silent assert on the two views.
 
 ```bash
+# the standard tools — can't split bug from fix here
 bandit -r labs/post_02_xss/
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_02_xss/
+
+# the custom rule — can
+semgrep --test --config rules/ rules/
+semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py   # 1 finding
+semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py       # 0 findings
 ```
 
-A lab whose class the standard tools do not cleanly catch is an expected outcome
-of the detection pass, not a defect — and itself a lesson about where SAST ends.
+The full reasoning and captured runs (including where Bandit and community
+Semgrep land) are in [`scans/`](scans/). The rule's one honest limit — it can't
+see sanitisation done through an intermediate variable — is documented in the
+fixture as `todook`.

@@ -1,0 +1,40 @@
+rules:
+  - id: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+    languages: [python]
+    severity: WARNING
+    message: >-
+      mark_safe() is called on a value that is not a literal and has not passed
+      through an allowlist sanitiser (nh3.clean) or an escaper. If any part of
+      that value is user-submitted, this marks attacker HTML safe and switches
+      off Django's autoescaping - a stored/reflected XSS sink. Sanitise first:
+      mark_safe(nh3.clean(value)).
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      asvs: "V5.3.3"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/cross-site-scripting-xss-stored-reflected-dom-based-attacks-mark-safe-unsafe-markdown/
+    # Why this rule exists (and is not a community rule): the standard tools
+    # cannot separate the bug from the fix here. Bandit's B308/B703 flag EVERY
+    # mark_safe() call - both the vulnerable view and the nh3-sanitised secure
+    # one. The Semgrep community rules only follow taint from `request.*`, which
+    # never reaches this sink because the payload is stored (POST -> DB -> GET
+    # render), so they report nothing. This rule is deliberately syntactic: it
+    # treats mark_safe() on anything that is not a string literal and not an
+    # allowlist-sanitiser/escaper call as suspect - so it fires on the
+    # unsanitised call and goes silent once nh3.clean() is in the argument.
+    #
+    # Known limit (documented in rules/xss.py): being syntactic, it cannot see
+    # sanitisation that happened one line earlier through a variable -
+    # `c = nh3.clean(x); mark_safe(c)` is a false positive. Taint mode would
+    # catch that, but it needs a source it can trace, and a stored-XSS model
+    # field is not one the OSS engine resolves. The lab views call mark_safe()
+    # inline, where this rule is exact.
+    patterns:
+      - pattern: mark_safe($X)
+      - pattern-not: mark_safe("...")
+      - pattern-not: mark_safe(nh3.clean(...))
+      - pattern-not: mark_safe(escape(...))
+      - pattern-not: mark_safe(format_html(...))
+      - pattern-not: mark_safe(format_html_join(...))

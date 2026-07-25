@@ -4,8 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Runnable Django labs for the OWASP Top 10, each scanned with the off-the-shelf
-tools a security analyst actually runs — Bandit and Semgrep (SAST), OWASP ZAP /
-sqlmap (DAST), pip-audit (SCA) — green in CI on every commit.**
+tools a security analyst actually runs — Bandit and Semgrep (SAST), sqlmap / OWASP
+ZAP (DAST, where the class fits), pip-audit (SCA) — green in CI on every commit.**
 
 This is the companion repository for the
 [Django Security Series](https://thiagoteixeira.tech/blog/). Each post explains
@@ -40,7 +40,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | # | Post / topic | Lab | Detection |
 |---|---|---|---|
 | 01 | SQL Injection | [`labs/post_01_sql_injection/`](labs/post_01_sql_injection/) | SAST (Bandit + Semgrep community) · DAST (sqlmap) |
-| 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST scanned, not asserted (the tools don't cleanly split bug from fix) · gate is `tests.py` |
+| 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST — the standard tools can't split bug from fix, so a **custom rule** ([`rules/xss.yaml`](rules/xss.yaml)) does, asserted in a hermetic CI job |
 
 ## Run the labs
 
@@ -87,10 +87,14 @@ the reader, not run in CI.
 ### Custom Semgrep rules are the exception, not the rule
 
 Most classes are well covered by Bandit and the Semgrep community packs, so most
-labs ship **no** custom rule. A hand-written rule appears under `rules/` only for
-the rare Django-specific pattern the standard tools miss (mass assignment, IDOR,
-privilege escalation) — see [CONTRIBUTING.md](CONTRIBUTING.md). SQL injection is
-covered by the standard tools, so Lab 01 has no custom rule.
+labs ship **no** custom rule. A hand-written rule appears under `rules/` only
+where the standard tools fall short on a Django-specific pattern — either they
+*miss* it (mass assignment, IDOR, privilege escalation) or they *can't separate
+the bug from the fix*. SQL injection (Lab 01) needs none: the standard tools
+catch it. XSS-via-`mark_safe` (Lab 02) is the first that does — Bandit flags both
+the vulnerable and the fixed view, community Semgrep flags neither, so
+[`rules/xss.yaml`](rules/xss.yaml) supplies the rule that tells them apart. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributing
 
