@@ -61,6 +61,11 @@ jobs:
       # the nh3.clean() inside the secure one) and Semgrep community reports
       # neither. "Fires on vulnerable, silent on secure" is false for this class,
       # so Lab 02's gate is its tests.py. See labs/post_02_xss/scans/README.md.
+      #
+      # Lab 03 (SSTI) is likewise NOT asserted with the standard tools: both miss
+      # the Template() sink entirely (Bandit 0/0, community Semgrep 0/0), so the
+      # fire/silent assert lives in the custom-rules job below against
+      # rules/ssti.yaml. See labs/post_03_ssti/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
@@ -90,17 +95,19 @@ jobs:
         with:
           python-version: "3.13"
       # Hermetic: only the in-repo rules/ are used, nothing is fetched from the
-      # registry. This job exists only because a lab ships a custom rule (Lab 02,
-      # XSS) — the standard tools cannot separate that bug from its fix (Bandit
-      # flags both views, community Semgrep neither). See rules/xss.yaml.
+      # registry. This job exists because some labs ship a custom rule — the
+      # standard tools fall short on the Django-specific pattern. Lab 02 (XSS):
+      # Bandit flags both views, community Semgrep neither (can't distinguish).
+      # Lab 03 (SSTI): both tools report nothing at all (they miss the
+      # Template() sink). See rules/xss.yaml and rules/ssti.yaml.
       - run: pip install "semgrep==1.170.0"
 
       # 1. Every custom rule matches its stem-paired fixture.
       - name: Rules pass their fixtures (semgrep --test)
         run: semgrep --test --config rules/ rules/
 
-      # 2. The XSS rule fires on the vulnerable view and stays silent on the
-      #    secure one — the scan-assert this class otherwise can't have.
+      # 2. Each rule fires on its lab's vulnerable view and stays silent on the
+      #    secure one — the scan-assert these classes otherwise can't have.
       - name: XSS rule fires on the vulnerable view
         run: |
           semgrep scan --config rules/xss.yaml --json --quiet \
@@ -111,6 +118,17 @@ jobs:
           semgrep scan --config rules/xss.yaml --json --quiet \
             labs/post_02_xss/views_secure.py > rule_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      - name: SSTI rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/ssti.yaml --json --quiet \
+            labs/post_03_ssti/views_vulnerable.py > rule_ssti_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_ssti_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: SSTI rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/ssti.yaml --json --quiet \
+            labs/post_03_ssti/views_secure.py > rule_ssti_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_ssti_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
   sca:
     name: SCA — pip-audit

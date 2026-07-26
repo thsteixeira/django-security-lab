@@ -30,11 +30,15 @@ never be able to hand to anyone else.
 
 ## Run it
 
+From the repository root (the folder with `docker-compose.yml`):
+
 ```bash
-docker compose up            # Postgres + Django on http://127.0.0.1:8000
+docker compose up -d          # Postgres + Django on http://127.0.0.1:8000 (background)
 ```
 
-Everything below is `curl` against that stack — no browser needed.
+Everything below is `curl` against that stack — no browser needed. Run the `curl`
+commands in a POSIX shell (Linux, macOS, WSL, or **Git Bash** on Windows); on
+Windows PowerShell use `curl.exe`, not the `curl` alias.
 
 ## Test the pair from the command line
 
@@ -128,6 +132,10 @@ not a literal and not an `nh3.clean()`/`escape()`/`format_html()` call — so it
 fires on the vulnerable view and stays silent on the secure one, the scan-assert
 the standard tools couldn't give. A hermetic CI job runs `semgrep --test` on the
 fixture and then that fire/silent assert on the two views.
+
+Bandit and Semgrep are pinned but **not bundled in the lab image** (CI installs
+them per-job). Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0`
+— or prefix a command with `docker compose run --rm web sh -c "pip install -q <tool>==<version> && <command>"`.
 
 ```bash
 # the standard tools — can't split bug from fix here

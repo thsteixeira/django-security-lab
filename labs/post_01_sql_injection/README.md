@@ -25,11 +25,15 @@ feature has no business reading.
 
 ## Run it
 
+From the repository root (the folder with `docker-compose.yml`):
+
 ```bash
-docker compose up            # Postgres + Django on http://127.0.0.1:8000
+docker compose up -d          # Postgres + Django on http://127.0.0.1:8000 (background)
 ```
 
-Everything below is `curl` against that stack — no browser needed.
+Everything below is `curl` against that stack — no browser needed. Run the `curl`
+commands in a POSIX shell (Linux, macOS, WSL, or **Git Bash** on Windows); on
+Windows PowerShell use `curl.exe`, not the `curl` alias.
 
 ## Test the pair from the command line
 
@@ -95,6 +99,10 @@ from a clone, and the full unedited runs are committed under
 
 ### SAST — Bandit and Semgrep community
 
+Bandit and Semgrep are pinned but **not bundled in the lab image** (CI installs
+them per-job). Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0`
+— or prefix a command with `docker compose run --rm web sh -c "pip install -q <tool>==<version> && <command>"`.
+
 ```bash
 bandit labs/post_01_sql_injection/views_vulnerable.py
 semgrep scan --config p/django labs/post_01_sql_injection/
@@ -134,7 +142,7 @@ difference.
 
 DAST needs [sqlmap](https://sqlmap.org) (not a project dependency — install it
 once with `pipx install sqlmap`, `pip install sqlmap`, or your distro package).
-Boot the lab (`docker compose up`), then point sqlmap at the vulnerable endpoint.
+Boot the lab (`docker compose up -d`), then point sqlmap at the vulnerable endpoint.
 No raised effort is needed: at its **default** `--level=1 --risk=1`, sqlmap
 fingerprints the back-end as PostgreSQL, confirms `?q=1` injectable four ways, and
 dumps the flag table the search should never reach:

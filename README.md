@@ -41,13 +41,16 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 |---|---|---|---|
 | 01 | SQL Injection | [`labs/post_01_sql_injection/`](labs/post_01_sql_injection/) | SAST (Bandit + Semgrep community) · DAST (sqlmap) |
 | 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST — the standard tools can't split bug from fix, so a **custom rule** ([`rules/xss.yaml`](rules/xss.yaml)) does, asserted in a hermetic CI job |
+| 03 | Server-Side Template Injection (SSTI) | [`labs/post_03_ssti/`](labs/post_03_ssti/) | SAST — the standard tools **miss** the `Template()` sink entirely, so a **custom rule** ([`rules/ssti.yaml`](rules/ssti.yaml)) catches it, asserted in the same hermetic CI job |
 
 ## Run the labs
 
-Docker + Postgres is the canonical path — what a reader runs matches what CI runs:
+Docker + Postgres is the canonical path — what a reader runs matches what CI runs.
+Run every `docker compose` command from the **repository root** (the folder with
+`docker-compose.yml`):
 
 ```bash
-docker compose up --build          # Postgres + Django on http://127.0.0.1:8000
+docker compose up -d --build       # Postgres + Django on http://127.0.0.1:8000
 ```
 
 Each lab's README then walks the vulnerable→secure pair from the command line
@@ -66,6 +69,11 @@ docker compose run --rm web python manage.py test
 
 Detection is **standard tools first** — the same scanners a CySA+ analyst runs,
 pointed at each lab. Each lab README shows the exact commands and captured output.
+
+The scanners are **not bundled in the image** (CI installs them per-job, pinned).
+Install what you need on the host — `pip install bandit==1.9.4 semgrep==1.170.0 pip-audit==2.9.0`
+(sqlmap ships separately) — or prefix any command with
+`docker compose run --rm web sh -c "pip install -q <tool>==<version> && <command>"`.
 
 ```bash
 # SAST — static analysis of the source
@@ -91,10 +99,16 @@ labs ship **no** custom rule. A hand-written rule appears under `rules/` only
 where the standard tools fall short on a Django-specific pattern — either they
 *miss* it (mass assignment, IDOR, privilege escalation) or they *can't separate
 the bug from the fix*. SQL injection (Lab 01) needs none: the standard tools
-catch it. XSS-via-`mark_safe` (Lab 02) is the first that does — Bandit flags both
-the vulnerable and the fixed view, community Semgrep flags neither, so
-[`rules/xss.yaml`](rules/xss.yaml) supplies the rule that tells them apart. See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+catch it. Two labs so far do:
+
+- **XSS-via-`mark_safe` (Lab 02)** — the *can't-distinguish* case: Bandit flags
+  both the vulnerable and the fixed view, community Semgrep flags neither, so
+  [`rules/xss.yaml`](rules/xss.yaml) supplies the rule that tells them apart.
+- **SSTI-via-`Template()` (Lab 03)** — the *miss* case: Bandit and community
+  Semgrep both report nothing at all (neither models the `Template()` sink), so
+  [`rules/ssti.yaml`](rules/ssti.yaml) supplies the only rule that fires.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributing
 

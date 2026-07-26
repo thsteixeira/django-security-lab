@@ -1,0 +1,40 @@
+# ============================================================================
+# SAST evidence - the CUSTOM Semgrep rule vs Lab 03 (SSTI)  (runs in CI, hermetic)
+#
+# Rule:     rules/ssti.yaml  (thiagoteixeira.django.security.ssti.template-from-user-input)
+# Fixture:  rules/ssti.py    (stem-paired; validated by `semgrep --test`)
+#
+# Commands:
+#   semgrep --test --config rules/ rules/
+#   semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_vulnerable.py
+#   semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-26
+# Result: fires on the vulnerable view (line 33) and is SILENT on the secure one
+#         - the scan-assert the standard tools couldn't give. Fixture: 2/2 pass.
+# ============================================================================
+
+$ semgrep --test --config rules/ rules/
+2/2: ✓ All tests passed
+No tests for fixes found.
+
+$ semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_vulnerable.py
+
+    labs/post_03_ssti/views_vulnerable.py
+    ❯❱ thiagoteixeira.django.security.ssti.template-from-user-input
+          A Django Template (or a Jinja2 from_string) is being compiled from a
+          value that is not a string literal. If any part of that value is
+          user-controlled, the user is writing your template source, not
+          supplying data to it - this is server-side template injection. [...]
+          Pass user input as context data to a fixed template instead.
+
+           33┆ rendered = Template(tpl).render(Context({"name": "world", "flag": flag}))
+
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+Ran 1 rule on 1 file: 1 finding.
+
+$ semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py
+
+ • Findings: 0 (0 blocking)
+Ran 1 rule on 1 file: 0 findings.

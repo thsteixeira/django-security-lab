@@ -1,0 +1,31 @@
+# ============================================================================
+# SAST evidence - Semgrep community rulesets vs Lab 03 (SSTI)
+#
+# Command:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_03_ssti/views_vulnerable.py
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_03_ssti/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-26
+# Result: 0 findings on BOTH views (156 Python community rules run). The
+#         community packs ship no rule for the django.template.Template() /
+#         Engine.from_string() sink - a MISS, the same gap Bandit has. See
+#         scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+        labs/post_03_ssti/views_vulnerable.py
+
+  Scanning 1 file tracked by git with 565 Code rules:
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+Ran 156 rules on 1 file: 0 findings.
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+        labs/post_03_ssti/views_secure.py
+
+  Scanning 1 file tracked by git with 565 Code rules:
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+Ran 156 rules on 1 file: 0 findings.

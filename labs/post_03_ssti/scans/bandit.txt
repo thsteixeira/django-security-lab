@@ -1,0 +1,36 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 03 (SSTI)
+#
+# Command:
+#   bandit -r labs/post_03_ssti/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-07-26
+# Result: ZERO findings on BOTH views. Bandit ships no check for Django's
+#         Template() / Engine.from_string() sink, so a template compiled from
+#         user input matches nothing. A clean report against genuinely
+#         vulnerable code is a MISS, not a pass. See scans/README.md.
+# ============================================================================
+
+Run started:2026-07-26 04:46:32.004206+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 129
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+
+Files skipped (0):

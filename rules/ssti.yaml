@@ -1,0 +1,39 @@
+rules:
+  - id: thiagoteixeira.django.security.ssti.template-from-user-input
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A Django Template (or a Jinja2 from_string) is being compiled from a value
+      that is not a string literal. If any part of that value is user-controlled,
+      the user is writing your template source, not supplying data to it - this is
+      server-side template injection. In DTL it leaks any name in the render
+      context and can invoke registered template tags; on a Jinja2 backend without
+      SandboxedEnvironment it is remote code execution. Pass user input as context
+      data to a fixed template instead:
+      Template("{{ value }}").render(Context({"value": user_input})).
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine ('Server-Side Template Injection')"
+      asvs: "V5.2.5"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/server-side-template-injection-ssti-when-django-templates-become-a-weapon/
+    # Why this rule exists (and is not a community rule): the standard tools MISS
+    # this class entirely. Bandit has no check for Django's Template()/from_string()
+    # (0 findings on both views), and the Semgrep community packs (p/django,
+    # p/python, p/owasp-top-ten) report nothing either. Neither fires on the
+    # vulnerable view, so there is no scan-assert to be had without a rule of our
+    # own. This rule is deliberately syntactic: it treats a template compiled from
+    # anything that is not a string literal as suspect - so it fires on
+    # Template(user_input) and goes silent on the fix, Template("{{ value }}"),
+    # whose source is a literal the developer controls.
+    #
+    # Known limit (documented in rules/ssti.py): being syntactic, it cannot see
+    # that a variable holds a literal - `t = "{{ v }}"; Template(t)` is a false
+    # positive. The lab views compile inline, where this rule is exact.
+    patterns:
+      - pattern-either:
+          - pattern: Template($X)
+          - pattern: $E.from_string($X)
+      - pattern-not: Template("...")
+      - pattern-not: $E.from_string("...")

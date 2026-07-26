@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "labs",
     "labs.post_01_sql_injection",
     "labs.post_02_xss",
+    "labs.post_03_ssti",
 ]
 
 MIDDLEWARE = [

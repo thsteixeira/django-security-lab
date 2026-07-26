@@ -11,6 +11,8 @@ def index(request):
         '<li><a href="/sql-injection/secure/?q=test">/sql-injection/secure/</a></li>'
         '<li><a href="/xss/vulnerable/">/xss/vulnerable/</a></li>'
         '<li><a href="/xss/secure/">/xss/secure/</a></li>'
+        '<li><a href="/ssti/vulnerable/?tpl={{ flag }}">/ssti/vulnerable/</a></li>'
+        '<li><a href="/ssti/secure/?tpl={{ flag }}">/ssti/secure/</a></li>'
         "</ul>"
     )
 
@@ -19,4 +21,5 @@ urlpatterns = [
     path("", index),
     path("sql-injection/", include("labs.post_01_sql_injection.urls")),
     path("xss/", include("labs.post_02_xss.urls")),
+    path("ssti/", include("labs.post_03_ssti.urls")),
 ]
