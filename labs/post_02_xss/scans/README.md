@@ -15,16 +15,21 @@ the exact command, tool version, and capture date.
 
 Lab 01 (SQL injection) asserts in CI that the SAST tools **fire on the
 vulnerable view and stay silent on the secure one**. For XSS-via-`mark_safe`
-neither standard tool can do that, in opposite ways:
+neither standard tool can do that, for two different reasons:
 
-**Bandit flags both views.** `B308`/`B703` match the `mark_safe()` call itself.
-It never looks at the argument, so `mark_safe(c.body)` (the bug) and
-`mark_safe(nh3.clean(c.body))` (the fix) are indistinguishable to it. The
-finding on `views_secure.py` is a false positive against correct code.
+**Bandit flags both views.** `B308`/`B703` are blacklist checks that match the
+`mark_safe()` call by name and never look at the argument, so `mark_safe(c.body)`
+(the bug) and `mark_safe(nh3.clean(c.body))` (the fix) are indistinguishable to
+it. The finding on `views_secure.py` is a false positive against correct code.
 
-**Semgrep's community rules report nothing at all**, on either view. Their taint
-analysis follows `request.*`, but the payload here is *stored* (POST → DB → GET
-render), so the source never reaches the sink and there is nothing to report.
+**Semgrep's community rules report nothing at all**, on either view — and *not*
+because of taint. Semgrep *has* a `mark_safe` rule
+([`avoid-mark-safe`](https://github.com/semgrep/semgrep-rules/blob/develop/python/django/security/audit/avoid-mark-safe.yaml)),
+but it is tagged `subcategory: audit`, `confidence: LOW`, and the curated packs
+(`p/django`, `p/python`, `p/owasp-top-ten`) don't include it — none of the 156
+rules that run target `mark_safe`. Run that rule directly and it fires on **both**
+views anyway: it excludes only `format_html()` and string literals, not
+`nh3.clean()`, so it flags the sanitised fix exactly as Bandit does.
 
 That is exactly the narrow, documented case where a **custom rule** earns its
 place ([`rules/xss.yaml`](../../../rules/xss.yaml), with the stem-paired fixture
