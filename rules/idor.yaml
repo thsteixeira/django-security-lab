@@ -1,0 +1,48 @@
+rules:
+  - id: thiagoteixeira.django.security.idor.object-lookup-without-owner-scope
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A get_object_or_404 / get_list_or_404 lookup is scoped to the whole table,
+      not to the requesting user. Being authenticated is not being authorised: if
+      the primary key comes from the URL, any logged-in user can read another
+      user's object by walking the ids - an Insecure Direct Object Reference
+      (IDOR). Scope the lookup to the owner so a foreign id simply 404s:
+      get_object_or_404(Model, pk=pk, owner=request.user).
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-639: Authorization Bypass Through User-Controlled Key"
+      asvs: "V4.2.1"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/broken-access-control-and-idor-when-logging-in-is-not-the-same-as-being-allowed/
+        - https://docs.semgrep.dev/learn/vulnerabilities/idor
+    # Why this rule exists (and is not a community rule): the standard tools MISS
+    # this class. Bandit ships 42 plugin tests, all dangerous-CALL/construct checks
+    # (shell, eval, mark_safe, yaml.load, ssl...); none models authorization, so an
+    # unscoped ORM lookup matches nothing - Bandit finds only a hardcoded test
+    # password in tests.py, noise unrelated to the class. The Semgrep community
+    # packs (p/django, p/python, p/owasp-top-ten; 156 Python rules) report 0 on
+    # both views. Semgrep's own docs explain why: IDOR "is the absence of an
+    # authorization check," the vulnerable code "appears syntactically correct,"
+    # and the recommended fix is "writing custom rules for your application that
+    # describe the access control logic you're expecting." This is that rule.
+    #
+    # It is deliberately syntactic: it flags get_object_or_404 / get_list_or_404
+    # that carry no owner=/user= scoping kwarg, and goes silent once one is present
+    # - so it fires on the vulnerable view and not on the owner-scoped fix.
+    #
+    # Known limits (documented in rules/idor.py): being syntactic and name-based,
+    # (1) it flags a lookup scoped by an app-specific field name it doesn't know
+    # (e.g. account=request.user) - a false positive (# todook); and (2) it targets
+    # the get_object_or_404/get_list_or_404 shortcuts, so a raw Model.objects.get(
+    # pk=pk) is the same bug but slips past it (# todoruleid). Taint mode does not
+    # help here - there is no dangerous data flow, only a missing predicate.
+    patterns:
+      - pattern-either:
+          - pattern: get_object_or_404(...)
+          - pattern: get_list_or_404(...)
+      - pattern-not: get_object_or_404(..., owner=$O, ...)
+      - pattern-not: get_object_or_404(..., user=$U, ...)
+      - pattern-not: get_list_or_404(..., owner=$O, ...)
+      - pattern-not: get_list_or_404(..., user=$U, ...)

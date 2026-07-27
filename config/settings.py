@@ -24,16 +24,31 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
+    "django.contrib.auth",       # B1 — the auth/session stack the Wave 2 labs need
+    "django.contrib.sessions",   # B1 — session-cookie auth (Series II/III labs)
     "django.contrib.staticfiles",
     "labs",
     "labs.post_01_sql_injection",
     "labs.post_02_xss",
     "labs.post_03_ssti",
+    "labs.post_06_idor",
 ]
 
+# B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
+# would force a token on every POST in every lab (including the shipped 01–03 and
+# every manual `curl`), which fights the command-line-first convention. The CSRF
+# lab (post 08) turns protection on *for its own secure view only*, so it can show
+# exempt-vs-protected side by side. AuthenticationMiddleware must follow
+# SessionMiddleware.
 MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
 ]
+
+# @login_required redirects here (POST-only endpoint; a GET just 405s, which is a
+# fine "you must log in" signal for a lab).
+LOGIN_URL = "/accounts/login/"
 
 ROOT_URLCONF = "config.urls"
 
@@ -42,7 +57,12 @@ TEMPLATES = [
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
         "APP_DIRS": True,
-        "OPTIONS": {"context_processors": []},
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+            ]
+        },
     },
 ]
 

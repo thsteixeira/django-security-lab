@@ -1,0 +1,85 @@
+# ============================================================================
+# SAST evidence - the custom rule (rules/idor.yaml) vs Lab 06
+#
+# Command:
+#   semgrep --test --config rules/ rules/          # rule matches its fixture
+#   semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py
+#   semgrep scan --config rules/idor.yaml labs/post_06_idor/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-27
+# Result: the rule FIRES on the vulnerable view (line 23, the unscoped
+#         get_object_or_404) and is SILENT on the secure view (scoped by
+#         owner=request.user) - the vulnerable-fires / secure-silent scan-assert
+#         the standard tools could not give for this class. The stem-paired
+#         fixture rules/idor.py passes `semgrep --test`. See scans/README.md.
+# ============================================================================
+
+$ semgrep --test --config rules/ rules/
+3/3: ✓ All tests passed
+No tests for fixes found.
+
+$ semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                         
+    labs\post_06_idor\views_vulnerable.py
+    ❯❱ rules.thiagoteixeira.django.security.idor.object-lookup-without-owner-scope
+          ❰❰ Blocking ❱❱
+          A get_object_or_404 / get_list_or_404 lookup is scoped to the whole table, not to the requesting
+          user. Being authenticated is not being authorised: if the primary key comes from the URL, any   
+          logged-in user can read another user's object by walking the ids - an Insecure Direct Object    
+          Reference (IDOR). Scope the lookup to the owner so a foreign id simply 404s:                    
+          get_object_or_404(Model, pk=pk, owner=request.user).                                            
+                                                                                                          
+           23┆ note = get_object_or_404(Note, pk=pk)
+
+
+$ semgrep scan --config rules/idor.yaml labs/post_06_idor/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+

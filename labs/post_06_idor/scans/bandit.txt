@@ -1,0 +1,63 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 06 (IDOR / Broken Access Control)
+#
+# Command:
+#   bandit -r labs/post_06_idor/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-07-27
+# Result: ZERO findings on the two VIEWS - Bandit misses the IDOR entirely.
+#         Its 42 plugin tests are all dangerous-CALL/construct checks (shell,
+#         eval, mark_safe, yaml.load, ssl...); none models authorization, so an
+#         unscoped get_object_or_404() matches nothing. The only findings are two
+#         B106 hardcoded-password hits on the *test fixture* password ("labpass")
+#         in tests.py - noise unrelated to the class (and a test literal, not a
+#         real credential). A clean report on genuinely vulnerable views is a
+#         MISS, not a pass. See scans/README.md.
+# ============================================================================
+
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-07-27 04:24:30.405392+00:00
+
+Test results:
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'labpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_06_idor/tests.py:24:21
+23	    def setUp(self):
+24	        self.alice = User.objects.create_user("alice", password="labpass")
+25	        self.bob = User.objects.create_user("bob", password="labpass")
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'labpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_06_idor/tests.py:25:19
+24	        self.alice = User.objects.create_user("alice", password="labpass")
+25	        self.bob = User.objects.create_user("bob", password="labpass")
+26	        self.alice_note = Note.objects.create(
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 159
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):

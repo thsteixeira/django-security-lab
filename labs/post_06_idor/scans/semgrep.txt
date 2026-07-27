@@ -1,0 +1,83 @@
+# ============================================================================
+# SAST evidence - Semgrep community rulesets vs Lab 06 (IDOR)
+#
+# Command:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_06_idor/views_vulnerable.py
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_06_idor/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-07-27
+# Result: 0 findings on BOTH views (156 Python community rules run). The packs
+#         ship no rule for owner-unscoped object lookups. Semgrep's own docs say
+#         why: IDOR "is the absence of an authorization check," the vulnerable
+#         code "appears syntactically correct," and the fix is "writing custom
+#         rules for your application that describe the access control logic you're
+#         expecting" (docs.semgrep.dev/learn/vulnerabilities/idor). A MISS - the
+#         same gap Bandit has. See scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_06_idor/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  python          151       1          Community     565                                                                
+  <multilang>       5       1                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_06_idor/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  python          151       1          Community     565                                                                
+  <multilang>       5       1                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+

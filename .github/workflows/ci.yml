@@ -66,6 +66,11 @@ jobs:
       # the Template() sink entirely (Bandit 0/0, community Semgrep 0/0), so the
       # fire/silent assert lives in the custom-rules job below against
       # rules/ssti.yaml. See labs/post_03_ssti/scans/README.md.
+      #
+      # Lab 06 (IDOR) is the same story: a semantic authorization flaw with no
+      # dangerous call to match, so Bandit and community Semgrep both miss it and
+      # the assert lives in the custom-rules job against rules/idor.yaml. See
+      # labs/post_06_idor/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
@@ -99,7 +104,8 @@ jobs:
       # standard tools fall short on the Django-specific pattern. Lab 02 (XSS):
       # Bandit flags both views, community Semgrep neither (can't distinguish).
       # Lab 03 (SSTI): both tools report nothing at all (they miss the
-      # Template() sink). See rules/xss.yaml and rules/ssti.yaml.
+      # Template() sink). Lab 06 (IDOR): both miss it — a semantic authz flaw,
+      # no dangerous call to match. See rules/xss.yaml, rules/ssti.yaml, rules/idor.yaml.
       - run: pip install "semgrep==1.170.0"
 
       # 1. Every custom rule matches its stem-paired fixture.
@@ -129,6 +135,17 @@ jobs:
           semgrep scan --config rules/ssti.yaml --json --quiet \
             labs/post_03_ssti/views_secure.py > rule_ssti_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_ssti_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      - name: IDOR rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/idor.yaml --json --quiet \
+            labs/post_06_idor/views_vulnerable.py > rule_idor_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_idor_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: IDOR rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/idor.yaml --json --quiet \
+            labs/post_06_idor/views_secure.py > rule_idor_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_idor_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
   sca:
     name: SCA — pip-audit

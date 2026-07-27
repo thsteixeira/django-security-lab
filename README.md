@@ -42,6 +42,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 01 | SQL Injection | [`labs/post_01_sql_injection/`](labs/post_01_sql_injection/) | SAST (Bandit + Semgrep community) · DAST (sqlmap) |
 | 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST — the standard tools can't split bug from fix, so a **custom rule** ([`rules/xss.yaml`](rules/xss.yaml)) does, asserted in a hermetic CI job |
 | 03 | Server-Side Template Injection (SSTI) | [`labs/post_03_ssti/`](labs/post_03_ssti/) | SAST — the standard tools **miss** the `Template()` sink entirely, so a **custom rule** ([`rules/ssti.yaml`](rules/ssti.yaml)) catches it, asserted in the same hermetic CI job |
+| 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 
 ## Run the labs
 
@@ -107,6 +108,11 @@ catch it. Two labs so far do:
 - **SSTI-via-`Template()` (Lab 03)** — the *miss* case: Bandit and community
   Semgrep both report nothing at all (neither models the `Template()` sink), so
   [`rules/ssti.yaml`](rules/ssti.yaml) supplies the only rule that fires.
+- **IDOR (Lab 06)** — the *miss* case again, for a deeper reason: it's a semantic
+  authorization flaw (the vulnerable and fixed code differ only by
+  `owner=request.user`), so Bandit ships no plugin for it and community Semgrep
+  covers it with none — Semgrep's own docs say the answer is a custom rule, which
+  [`rules/idor.yaml`](rules/idor.yaml) supplies.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
