@@ -55,7 +55,7 @@ bandit -r labs/post_06_idor/
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_06_idor/views_vulnerable.py
 
 # the custom rule — catches it
-semgrep --test --config rules/ rules/
+semgrep --test --config rules/idor.yaml rules/idor.py
 semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py   # 1 finding (line 23)
 semgrep scan --config rules/idor.yaml labs/post_06_idor/views_secure.py       # 0 findings
 ```

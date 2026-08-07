@@ -43,6 +43,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST — the standard tools can't split bug from fix, so a **custom rule** ([`rules/xss.yaml`](rules/xss.yaml)) does, asserted in a hermetic CI job |
 | 03 | Server-Side Template Injection (SSTI) | [`labs/post_03_ssti/`](labs/post_03_ssti/) | SAST — the standard tools **miss** the `Template()` sink entirely, so a **custom rule** ([`rules/ssti.yaml`](rules/ssti.yaml)) catches it, asserted in the same hermetic CI job |
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
+| 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
 
 ## Run the labs
 
@@ -113,6 +114,12 @@ catch it. Two labs so far do:
   `owner=request.user`), so Bandit ships no plugin for it and community Semgrep
   covers it with none — Semgrep's own docs say the answer is a custom rule, which
   [`rules/idor.yaml`](rules/idor.yaml) supplies.
+- **Privilege escalation / mass assignment (Labs 07 & 10)** — the *miss* case:
+  neither Bandit nor community Semgrep (nor the registry `r/python.django`) flags
+  `fields='__all__'` — that pattern is caught by Django *linters* (Ruff `DJ007`,
+  flake8-django `DJ07`), not this SAST toolchain — so
+  [`rules/mass_assignment.yaml`](rules/mass_assignment.yaml) supplies it, shared
+  by both posts (07 exposes a permission field, 10 a non-permission one).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 

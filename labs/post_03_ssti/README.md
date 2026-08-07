@@ -157,7 +157,7 @@ bandit -r labs/post_03_ssti/
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_03_ssti/
 
 # the custom rule — catches it
-semgrep --test --config rules/ rules/
+semgrep --test --config rules/ssti.yaml rules/ssti.py
 semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_vulnerable.py   # 1 finding
 semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py       # 0 findings
 ```

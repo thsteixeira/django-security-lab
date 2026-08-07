@@ -1,20 +1,20 @@
 # ============================================================================
-# SAST evidence - the custom rule (rules/idor.yaml) vs Lab 06
+# SAST evidence - the custom rule (rules/mass_assignment.yaml) vs Lab 07
 #
 # Command:
-#   semgrep --test --config rules/idor.yaml rules/idor.py          # rule matches its fixture
-#   semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py
-#   semgrep scan --config rules/idor.yaml labs/post_06_idor/views_secure.py
+#   semgrep --test --config rules/mass_assignment.yaml rules/mass_assignment.py
+#   semgrep scan --config rules/mass_assignment.yaml labs/post_07_privesc/views_vulnerable.py
+#   semgrep scan --config rules/mass_assignment.yaml labs/post_07_privesc/views_secure.py
 #
-# Tool: Semgrep 1.170.0  |  Captured: 2026-07-27
-# Result: the rule FIRES on the vulnerable view (line 23, the unscoped
-#         get_object_or_404) and is SILENT on the secure view (scoped by
-#         owner=request.user) - the vulnerable-fires / secure-silent scan-assert
-#         the standard tools could not give for this class. The stem-paired
-#         fixture rules/idor.py passes `semgrep --test`. See scans/README.md.
+# Tool: Semgrep 1.170.0 (run in the lab container)  |  Captured: 2026-08-07
+# Result: the rule passes `semgrep --test` (1/1, scoped to this rule). It
+#         FIRES on the vulnerable view (line 26, fields="__all__") and is SILENT
+#         on the secure view (explicit allowlist) - the fires/silent scan-assert
+#         the standard tools could not give. Rule is SHARED with Post 10 (mass
+#         assignment). See scans/README.md.
 # ============================================================================
 
-$ semgrep --test --config rules/idor.yaml rules/idor.py
+$ semgrep --test --config rules/mass_assignment.yaml rules/mass_assignment.py
                
                
 ┌─────────────┐
@@ -25,7 +25,7 @@ $ semgrep --test --config rules/idor.yaml rules/idor.py
 1/1: ✓ All tests passed
 No tests for fixes found.
 
-$ semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py
+$ semgrep scan --config rules/mass_assignment.yaml labs/post_07_privesc/views_vulnerable.py
                
                
 ┌─────────────┐
@@ -38,17 +38,17 @@ $ semgrep scan --config rules/idor.yaml labs/post_06_idor/views_vulnerable.py
 ┌────────────────┐
 │ 1 Code Finding │
 └────────────────┘
-                                         
-    labs/post_06_idor/views_vulnerable.py
-    ❯❱ rules.thiagoteixeira.django.security.idor.object-lookup-without-owner-scope
+                                            
+    labs/post_07_privesc/views_vulnerable.py
+    ❯❱ rules.thiagoteixeira.django.security.mass-assignment.model-fields-all
           ❰❰ Blocking ❱❱
-          A get_object_or_404 / get_list_or_404 lookup is scoped to the whole table, not to the requesting
-          user. Being authenticated is not being authorised: if the primary key comes from the URL, any   
-          logged-in user can read another user's object by walking the ids - an Insecure Direct Object    
-          Reference (IDOR). Scope the lookup to the owner so a foreign id simply 404s:                    
-          get_object_or_404(Model, pk=pk, owner=request.user).                                            
-                                                                                                          
-           23┆ note = get_object_or_404(Note, pk=pk)
+          A ModelForm/ModelSerializer Meta uses fields = "__all__", so every field on the model is bindable   
+          from the request — including any permission field (is_staff, is_superuser, role) or otherwise       
+          sensitive column. This is a mass-assignment (over-posting) sink: a client can set fields the feature
+          never meant to expose, e.g. POST role=staff to self-promote. Enumerate an explicit allowlist        
+          instead: fields = ["display_name", "bio"].                                                          
+                                                                                                              
+           26┆ fields = "__all__"  # DANGER: exposes `role` to mass assignment
 
                 
                 
@@ -65,7 +65,7 @@ Ran 1 rule on 1 file: 1 finding.
 
 A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
 
-$ semgrep scan --config rules/idor.yaml labs/post_06_idor/views_secure.py
+$ semgrep scan --config rules/mass_assignment.yaml labs/post_07_privesc/views_secure.py
                
                
 ┌─────────────┐

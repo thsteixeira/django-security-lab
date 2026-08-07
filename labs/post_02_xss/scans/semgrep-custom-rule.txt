@@ -5,7 +5,7 @@
 # Fixture:  rules/xss.py    (stem-paired; validated by `semgrep --test`)
 #
 # Commands:
-#   semgrep --test --config rules/ rules/
+#   semgrep --test --config rules/xss.yaml rules/xss.py
 #   semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py
 #   semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py
 #
@@ -20,26 +20,78 @@
 # Verbatim output; no normalization was needed.
 # ============================================================================
 
-$ semgrep --test --config rules/ rules/
+$ semgrep --test --config rules/xss.yaml rules/xss.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file with 1 Code rule:
+  Scanning 1 file.
 1/1: ✓ All tests passed
+No tests for fixes found.
 
 $ semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py
-
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                  
+                  
 ┌────────────────┐
 │ 1 Code Finding │
 └────────────────┘
-
+                                        
     labs/post_02_xss/views_vulnerable.py
-    ❯❱ thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
-          mark_safe() is called on a value that is not a literal and has not passed through an allowlist
-          sanitiser (nh3.clean) or an escaper. If any part of that value is user-submitted, this marks
+    ❯❱ rules.thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+          ❰❰ Blocking ❱❱
+          mark_safe() is called on a value that is not a literal and has not passed through an allowlist   
+          sanitiser (nh3.clean) or an escaper. If any part of that value is user-submitted, this marks     
           attacker HTML safe and switches off Django's autoescaping - a stored/reflected XSS sink. Sanitise
-          first: mark_safe(nh3.clean(value)).
-
+          first: mark_safe(nh3.clean(value)).                                                              
+                                                                                                           
            32┆ f"<li><strong>{escape(c.author)}</strong>: {as_html(mark_safe(c.body))}</li>"
 
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
 Ran 1 rule on 1 file: 1 finding.
 
-$ semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
 
+$ semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
 Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+

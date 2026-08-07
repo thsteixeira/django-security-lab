@@ -1,0 +1,51 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 07 (Privilege Escalation via mass assignment)
+#
+# Command:
+#   bandit -r labs/post_07_privesc/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-08-07
+# Result: ZERO findings on the views/forms - Bandit misses the class. Its 42
+#         plugin tests are all dangerous-CALL/construct checks; none inspects a
+#         ModelForm/Serializer field list, so fields="__all__" matches nothing.
+#         The only finding is a B106 hardcoded-password on the *test* fixture
+#         password in tests.py - noise unrelated to the class. A clean report on
+#         genuinely vulnerable code is a MISS, not a pass. See scans/README.md.
+# ============================================================================
+
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-08-07 05:27:04.632758+00:00
+
+Test results:
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'labpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_07_privesc/tests.py:24:21
+23	    def setUp(self):
+24	        self.alice = User.objects.create_user("alice", password="labpass")
+25	        Profile.objects.create(user=self.alice, display_name="Alice", role="member")
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 222
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):

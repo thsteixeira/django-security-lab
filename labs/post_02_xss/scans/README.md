@@ -61,7 +61,7 @@ bandit -r labs/post_02_xss/
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_02_xss/
 
 # the custom rule (it can) — fixture check, then the two views
-semgrep --test --config rules/ rules/
+semgrep --test --config rules/xss.yaml rules/xss.py
 semgrep scan --config rules/xss.yaml labs/post_02_xss/views_vulnerable.py   # 1 finding
 semgrep scan --config rules/xss.yaml labs/post_02_xss/views_secure.py       # 0 findings
 ```

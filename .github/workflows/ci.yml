@@ -71,6 +71,11 @@ jobs:
       # dangerous call to match, so Bandit and community Semgrep both miss it and
       # the assert lives in the custom-rules job against rules/idor.yaml. See
       # labs/post_06_idor/scans/README.md.
+      #
+      # Lab 07 (privilege escalation / mass assignment) likewise: neither tool
+      # flags fields='__all__' (a Django-linter check, not SAST), so its assert
+      # lives in the custom-rules job against rules/mass_assignment.yaml. See
+      # labs/post_07_privesc/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
@@ -105,7 +110,9 @@ jobs:
       # Bandit flags both views, community Semgrep neither (can't distinguish).
       # Lab 03 (SSTI): both tools report nothing at all (they miss the
       # Template() sink). Lab 06 (IDOR): both miss it — a semantic authz flaw,
-      # no dangerous call to match. See rules/xss.yaml, rules/ssti.yaml, rules/idor.yaml.
+      # no dangerous call to match. Lab 07 (privesc/mass assignment): both miss
+      # fields='__all__' (that's Django-linter territory, not SAST). See
+      # rules/xss.yaml, rules/ssti.yaml, rules/idor.yaml, rules/mass_assignment.yaml.
       - run: pip install "semgrep==1.170.0"
 
       # 1. Every custom rule matches its stem-paired fixture.
@@ -146,6 +153,17 @@ jobs:
           semgrep scan --config rules/idor.yaml --json --quiet \
             labs/post_06_idor/views_secure.py > rule_idor_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_idor_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      - name: Mass-assignment rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/mass_assignment.yaml --json --quiet \
+            labs/post_07_privesc/views_vulnerable.py > rule_ma_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_ma_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Mass-assignment rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/mass_assignment.yaml --json --quiet \
+            labs/post_07_privesc/views_secure.py > rule_ma_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_ma_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
   sca:
     name: SCA — pip-audit

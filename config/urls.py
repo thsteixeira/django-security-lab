@@ -17,6 +17,8 @@ def index(request):
         '<li><a href="/ssti/secure/?tpl={{ flag }}">/ssti/secure/</a></li>'
         "<li>/idor/vulnerable/&lt;pk&gt;/ and /idor/secure/&lt;pk&gt;/ "
         "&mdash; log in first: POST /accounts/login/</li>"
+        "<li>/privesc/vulnerable/ and /privesc/secure/ (POST role=staff), "
+        "then /privesc/staff-area/ &mdash; log in first</li>"
         "</ul>"
     )
 
@@ -29,4 +31,5 @@ urlpatterns = [
     path("xss/", include("labs.post_02_xss.urls")),
     path("ssti/", include("labs.post_03_ssti.urls")),
     path("idor/", include("labs.post_06_idor.urls")),
+    path("privesc/", include("labs.post_07_privesc.urls")),
 ]
