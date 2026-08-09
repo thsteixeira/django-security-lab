@@ -7,10 +7,13 @@
 tools a security analyst actually runs — Bandit and Semgrep (SAST), sqlmap / OWASP
 ZAP (DAST, where the class fits), pip-audit (SCA) — green in CI on every commit.**
 
-This is the companion repository for the
-[Django Security Series](https://thiagoteixeira.tech/blog/). Each post explains
-one attack; the matching lab here is the proof you can re-run: a vulnerable view
-and a secure view, plus the exact commands and captured output the post quotes.
+This is the companion repository for
+**[Secure by Design](https://thiagoteixeira.tech/series/secure-by-design/)** — a
+Django web application security series, also available in
+**[Portuguese](https://thiagoteixeira.tech/pt-br/series/secure-by-design/)**. Each
+post explains one attack; the matching lab here is the proof you can re-run: a
+vulnerable view and a secure view, plus the exact commands and captured output the
+post quotes.
 Clone it, boot the lab, and exercise the vulnerable→secure pair **from the
 command line** — `curl` for the request/response, the standard scanners for
 detection, `manage.py test` as the gate. No browser required.
