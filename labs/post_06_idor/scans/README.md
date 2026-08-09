@@ -31,7 +31,11 @@ triaging that lone false alarm to nothing is itself the analyst's job.
 
 **Semgrep's community rules report nothing either** (0/0, 156 Python rules). The
 packs an analyst actually runs (`p/django`, `p/python`, `p/owasp-top-ten`) ship
-**no rule for owner-unscoped object lookups**. Semgrep's own documentation says
+**no rule for owner-unscoped object lookups** — and neither does the
+**audit/registry tier** (checked with `semgrep --config r/python.django --config
+r/python`; only an unrelated `audit.xss.direct-use-of-httpresponse` nit fires),
+so this is a true gap in every tier, not just the curated packs. Semgrep's own
+documentation says
 exactly why, and it is worth quoting because it doubles as the justification for
 writing our own rule:
 

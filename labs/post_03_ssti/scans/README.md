@@ -29,8 +29,11 @@ The free packs an analyst actually runs (`p/django`, `p/python`,
 `p/owasp-top-ten`) centre their Django coverage on the autoescape/`mark_safe`
 (XSS) side and ship **no rule for the `Template(user_input)` sink**. Semgrep
 *does* carry a Flask SSTI rule (`render_template_string`), but not the Django
-equivalent; Pro/registry rules behind a login may differ, but the community set
-misses it.
+equivalent. And this is not just the curated packs: the **audit/registry tier**
+was checked too (`semgrep --config r/python.django --config r/python`) and it
+has **no** Django `Template()`/SSTI rule either — only an unrelated
+`audit.xss.direct-use-of-httpresponse` style nit fires. So a custom rule is
+genuinely warranted; Semgrep ships nothing for this sink in any tier.
 
 That is the §6.4.1 case: the standard tools **miss a genuinely Django-specific
 pattern**, so a **custom rule** earns its place —
