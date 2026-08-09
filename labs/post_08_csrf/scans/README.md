@@ -49,14 +49,27 @@ where the audit-tier `avoid-mark-safe` rule fires on *both* views and can't tell
 the bug from the fix — *that* forces a custom rule; here the audit rule
 distinguishes cleanly.)
 
-## Why no push-button DAST here
+## Why there is no captured DAST run here
 
-CSRF is a listed DAST class — OWASP ZAP's active scan flags state-changing forms
-that lack an anti-CSRF token — and that is a reasonable second opinion to capture
-against the booted lab. But note the **SameSite caveat**: Django's `csrftoken`
-and `sessionid` cookies default to `SameSite=Lax`, so a modern browser will not
-attach them to the attacker's cross-site POST in the first place — the browser
-may block the forgery *before* Django's token check would. That is defence in
-depth, not a lab defect; the lab's server-side lesson (`@csrf_protect` rejects the
-tokenless POST with 403) stands regardless, and `tests.py` proves it with
-`Client(enforce_csrf_checks=True)`.
+CSRF is a listed DAST class, and OWASP ZAP has a rule for it — **Absence of
+Anti-CSRF Tokens** flags a state-changing form carrying no token. This directory
+still ships **no captured ZAP run**, for two honest reasons:
+
+1. **The form is auth-gated.** The transfer view is behind `@login_required`, so
+   an unauthenticated ZAP spider/baseline is redirected to login and never
+   reaches it. A faithful run needs an *authenticated* ZAP context (a login
+   script + session handling) — more setup than this finding earns, and beyond
+   what a reader can reproduce with one command.
+2. **What ZAP reports is a server fact, not an exploit.** Its finding would be
+   *"this endpoint has no anti-CSRF token,"* a statement about the **server** —
+   not proof a drive-by attack lands. Django's `csrftoken`/`sessionid` cookies
+   default to `SameSite=Lax`, so a modern browser will not attach them to the
+   attacker's cross-site POST in the first place; the browser may block the
+   forgery *before* Django's token check would. That is defence in depth, not a
+   lab defect.
+
+So DAST here is **deferred with a reason** (as in the stored-XSS and SSTI labs),
+not captured. The server-side lesson (`@csrf_protect` rejects the tokenless POST
+with `403`) stands regardless, and `tests.py` proves it deterministically with
+`Client(enforce_csrf_checks=True)`. To see ZAP flag it yourself, point an
+authenticated scan at the booted lab.
