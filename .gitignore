@@ -9,4 +9,5 @@ __pycache__/
 .pytest_cache/
 staticfiles/
 .DS_Store
-jar.txt
+jar*.txt
+cookies.txt

@@ -19,6 +19,8 @@ def index(request):
         "&mdash; log in first: POST /accounts/login/</li>"
         "<li>/privesc/vulnerable/ and /privesc/secure/ (POST role=staff), "
         "then /privesc/staff-area/ &mdash; log in first</li>"
+        "<li>/csrf/vulnerable/transfer/ and /csrf/secure/transfer/ "
+        "(POST to_account=bob, no token), then /csrf/account/ &mdash; log in first</li>"
         "</ul>"
     )
 
@@ -32,4 +34,5 @@ urlpatterns = [
     path("ssti/", include("labs.post_03_ssti.urls")),
     path("idor/", include("labs.post_06_idor.urls")),
     path("privesc/", include("labs.post_07_privesc.urls")),
+    path("csrf/", include("labs.post_08_csrf.urls")),
 ]

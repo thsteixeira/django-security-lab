@@ -1,0 +1,85 @@
+# ============================================================================
+# SAST evidence - Semgrep AUDIT-tier rule vs Lab 08 (CSRF)
+#
+# Command:
+#   semgrep scan --config r/python.django.security.audit.csrf-exempt \
+#           labs/post_08_csrf/views_vulnerable.py   (and views_secure.py)
+#
+# Tool: Semgrep 1.170.0 (run in the lab container)  |  Captured: 2026-08-07
+# Result: the audit rule python.django.security.audit.csrf-exempt.no-csrf-exempt
+#         FIRES on the vulnerable view (@csrf_exempt, 1 finding) and is SILENT on
+#         the secure view (@csrf_protect, 0). No custom rule needed - Semgrep
+#         already ships a rule that distinguishes the pair; it is just excluded
+#         from the curated packs. The lesson is audit-tier awareness. See
+#         scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_csrf/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                         
+    labs/post_08_csrf/views_vulnerable.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           24┆ @csrf_exempt
+           25┆ @login_required
+           26┆ def transfer(request):
+           27┆     return perform_transfer(request)
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+
+$ semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_csrf/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+

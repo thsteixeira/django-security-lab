@@ -1,0 +1,58 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 08 (CSRF)
+#
+# Command:
+#   bandit -r labs/post_08_csrf/
+#
+# Tool: Bandit 1.9.4 (run in the lab container)  |  Captured: 2026-08-07
+# Result: nothing on the views - Bandit has no check for @csrf_exempt. The only
+#         findings are B106 hardcoded-password on the *test* password in tests.py,
+#         noise unrelated to the class. A MISS. See scans/README.md.
+# ============================================================================
+
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.14
+Run started:2026-08-09 03:24:45.766424+00:00
+
+Test results:
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'labpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_08_csrf/tests.py:26:21
+25	    def setUp(self):
+26	        self.alice = User.objects.create_user("alice", password="labpass")
+27	        self.bob = User.objects.create_user("bob", password="labpass")
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'labpass'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_08_csrf/tests.py:27:19
+26	        self.alice = User.objects.create_user("alice", password="labpass")
+27	        self.bob = User.objects.create_user("bob", password="labpass")
+28	        Account.objects.create(user=self.alice, holdings=FLAG)  # victim
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 195
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):

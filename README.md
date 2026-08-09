@@ -47,6 +47,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 03 | Server-Side Template Injection (SSTI) | [`labs/post_03_ssti/`](labs/post_03_ssti/) | SAST — the standard tools **miss** the `Template()` sink entirely, so a **custom rule** ([`rules/ssti.yaml`](rules/ssti.yaml)) catches it, asserted in the same hermetic CI job |
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 | 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
+| 08 | Cross-Site Request Forgery (CSRF) | [`labs/post_08_csrf/`](labs/post_08_csrf/) | SAST — curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule (`no-csrf-exempt`) catches it, so **no custom rule** — asserted in the SAST job |
 
 ## Run the labs
 
@@ -123,6 +124,14 @@ catch it. Two labs so far do:
   flake8-django `DJ07`), not this SAST toolchain — so
   [`rules/mass_assignment.yaml`](rules/mass_assignment.yaml) supplies it, shared
   by both posts (07 exposes a permission field, 10 a non-permission one).
+
+**Not every gap needs a custom rule.** **CSRF (Lab 08)** is the counter-example:
+the curated packs miss `@csrf_exempt`, but Semgrep already ships a rule for it in
+the **audit tier** (`r/python.django…audit.csrf-exempt.no-csrf-exempt`) that
+fires on the exempt view and stays silent on `@csrf_protect`. Writing our own
+would duplicate it — so Lab 08 ships no rule and instead teaches *audit-tier
+awareness*: run the audit tier, not just the default pack. The detection pass
+always checks that tier before deciding a rule is warranted.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 

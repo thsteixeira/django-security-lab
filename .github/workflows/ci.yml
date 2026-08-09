@@ -53,8 +53,9 @@ jobs:
 
       # Post 1 (SQL injection) is a class the standard tools catch, so it carries
       # a scan-assert: both tools must flag the vulnerable view and stay silent on
-      # the secure one. DAST-only classes (CSRF, access control, …) carry no such
-      # assert — their gate is the Django tests above.
+      # the secure one. Access-control classes (IDOR, privesc) carry no standard-
+      # tool assert — theirs lives in the custom-rules job — and Lab 08 (CSRF)
+      # carries one from Semgrep's AUDIT tier (added at the end of this job).
       #
       # Lab 02 (XSS) is deliberately NOT asserted here, and adding an assert would
       # be a bug, not a fix: Bandit flags mark_safe() on BOTH views (it cannot see
@@ -76,6 +77,12 @@ jobs:
       # flags fields='__all__' (a Django-linter check, not SAST), so its assert
       # lives in the custom-rules job against rules/mass_assignment.yaml. See
       # labs/post_07_privesc/scans/README.md.
+      #
+      # Lab 08 (CSRF) needs NO custom rule: Semgrep already ships an @csrf_exempt
+      # rule, but in the AUDIT tier the curated packs exclude. We run that rule
+      # explicitly below (registry-fetched, non-hermetic like the p/django steps)
+      # — it fires on the vulnerable view and is silent on the secure one. See
+      # labs/post_08_csrf/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
@@ -95,6 +102,20 @@ jobs:
           semgrep scan --config p/django --json --quiet \
             labs/post_01_sql_injection/views_secure.py > semgrep_secure.json
           python -c "import json,sys; n=len(json.load(open('semgrep_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Lab 08 (CSRF) — Semgrep's audit-tier @csrf_exempt rule. The curated packs
+      # exclude it, so we point --config at the audit ruleset directly. Fires on
+      # the @csrf_exempt view, silent on the @csrf_protect one. No custom rule.
+      - name: Semgrep audit rule fires on the CSRF vulnerable view
+        run: |
+          semgrep scan --config r/python.django.security.audit.csrf-exempt --json --quiet \
+            labs/post_08_csrf/views_vulnerable.py > csrf_vuln.json
+          python -c "import json,sys; n=len(json.load(open('csrf_vuln.json'))['results']); print('audit-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Semgrep audit rule is silent on the CSRF secure view
+        run: |
+          semgrep scan --config r/python.django.security.audit.csrf-exempt --json --quiet \
+            labs/post_08_csrf/views_secure.py > csrf_secure.json
+          python -c "import json,sys; n=len(json.load(open('csrf_secure.json'))['results']); print('audit-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
   custom-rules:
     name: Custom Semgrep rules (hermetic) — fixture + lab assert

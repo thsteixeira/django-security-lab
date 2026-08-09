@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "labs.post_03_ssti",
     "labs.post_06_idor",
     "labs.post_07_privesc",
+    "labs.post_08_csrf",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
