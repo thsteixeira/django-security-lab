@@ -1,0 +1,76 @@
+# ============================================================================
+# SAST evidence - Semgrep vs Lab 09 (Path Traversal)
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-11
+#
+# Three findings, empirically reproduced (details + probe files in scans/README.md):
+#
+#  (A) Curated community packs MISS it - 0 on both views:
+#        semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#            labs/post_09_path_traversal/views_vulnerable.py   -> 0 findings
+#            labs/post_09_path_traversal/views_secure.py       -> 0 findings
+#      A Django path-traversal rule EXISTS in the registry
+#      (python.django.security.injection.path-traversal.path-traversal-join) but is
+#      EXCLUDED from the curated packs: the 156-rule curated set finds 0 even on the
+#      one-liner that rule matches directly (same tier exclusion as avoid-mark-safe
+#      / Lab 02 and csrf-exempt / Lab 08). The whole registry (r/python, 371 rules)
+#      is also 0 on the realistic vulnerable view.
+#
+#  (B) The registry rule, run directly, misses the REALISTIC form. It is a
+#      syntactic pattern-either (not taint); the OSS engine follows only ONE
+#      variable indirection, so it fires on the inlined open(os.path.join(base,
+#      request.GET.get(...))) and single-hop variants, but is SILENT on the two-hop
+#      shape the lab (and the blog post's Vulnerable Pattern 1) actually uses:
+#          name = request.GET.get(...); path = os.path.join(base, name); open(path)
+#      Bridging both hops is Semgrep Pro interprocedural taint, absent from the
+#      community engine.
+#
+#        semgrep scan --config \
+#          r/python.django.security.injection.path-traversal.path-traversal-join \
+#          <probe>                                     inlined one-liner -> 1 finding
+#                                                      two-hop realistic -> 0 findings
+#
+#  (C) The repo's custom rule (rules/path_traversal.yaml) catches the realistic
+#      form the registry rule misses, and is silent on the safe_join fix - the
+#      scan-assert this class otherwise can't have. Asserted in the hermetic
+#      custom-rules CI job.
+#
+#        semgrep scan --config rules/path_traversal.yaml \
+#            labs/post_09_path_traversal/views_vulnerable.py   -> 1 finding
+#            labs/post_09_path_traversal/views_secure.py       -> 0 findings
+# ============================================================================
+
+===== (A) Curated community packs — p/django + p/python + p/owasp-top-ten =====
+
+VULNERABLE view:  Ran 156 rules on 1 file: 0 findings.
+SECURE view:      Ran 156 rules on 1 file: 0 findings.
+
+# Confirmation the rule is registry-only (excluded from the curated packs): the
+# curated packs are 0 even on the inlined form the registry rule DOES match —
+#   open(os.path.join(settings.MEDIA_ROOT, request.GET.get('file', '')), 'rb')
+#   -> Ran 156 rules on 1 file: 0 findings.
+
+
+===== (B) Registry rule direct — path-traversal-join (OSS engine, 1 rule) =====
+
+# Reproduced with minimal probes (one function each):
+#   open(os.path.join(base, request.GET.get('file','')))            -> 1 finding   (inlined)
+#   name = request...; open(os.path.join(base, name))               -> 1 finding   (1 hop)
+#   path = os.path.join(base, request...); open(path)               -> 1 finding   (1 hop)
+#   name = request...; path = os.path.join(base, name); open(path)  -> 0 findings  (2 hops)  <-- the realistic form, MISSED
+#   (the blog post's Vulnerable Pattern 1, verbatim)                -> 0 findings
+
+Ran 1 rule on labs/post_09_path_traversal/views_vulnerable.py: 0 findings.
+
+
+===== (C) Custom rule — rules/path_traversal.yaml =====
+
+VULNERABLE view:
+ • Findings: 1 (1 blocking)
+    rules.thiagoteixeira.django.security.path-traversal.ospath-join-reaches-open
+      A filesystem path built with os.path.join() is passed to open(). ...
+           37┆ data = open(path, "rb").read()
+Ran 1 rule on 1 file: 1 finding.
+
+SECURE view (safe_join):
+Ran 1 rule on 1 file: 0 findings.

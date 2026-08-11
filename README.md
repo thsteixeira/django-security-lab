@@ -49,6 +49,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 | 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
 | 08 | Cross-Site Request Forgery (CSRF) | [`labs/post_08_csrf/`](labs/post_08_csrf/) | SAST — curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule (`no-csrf-exempt`) catches it, so **no custom rule** — asserted in the SAST job |
+| 09 | Path Traversal | [`labs/post_09_path_traversal/`](labs/post_09_path_traversal/) | SAST — Bandit 0/0; the Django community rule is **registry-only** *and* its OSS engine **misses the realistic multi-variable form** (Pro-taint territory), so a **custom rule** ([`rules/path_traversal.yaml`](rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |
 | 11 | Brute Force & Credential Stuffing | [`labs/post_11_brute_force/`](labs/post_11_brute_force/) | **No SAST tier finds it** (wrong-key + missing-control) — the gate is `tests.py` and a dynamic `curl` XFF-rotation probe |
 
 ## Run the labs
@@ -109,7 +110,7 @@ labs ship **no** custom rule. A hand-written rule appears under `rules/` only
 where the standard tools fall short on a Django-specific pattern — either they
 *miss* it (mass assignment, IDOR, privilege escalation) or they *can't separate
 the bug from the fix*. SQL injection (Lab 01) needs none: the standard tools
-catch it. Two labs so far do:
+catch it. Several do:
 
 - **XSS-via-`mark_safe` (Lab 02)** — the *can't-distinguish* case: Bandit flags
   both the vulnerable and the fixed view, community Semgrep flags neither, so
@@ -128,6 +129,17 @@ catch it. Two labs so far do:
   flake8-django `DJ07`), not this SAST toolchain — so
   [`rules/mass_assignment.yaml`](rules/mass_assignment.yaml) supplies it, shared
   by both posts (07 exposes a permission field, 10 a non-permission one).
+- **Path traversal (Lab 09)** — the *miss* case with a twist worth knowing: a
+  Django rule *does* exist in the Semgrep registry
+  (`python.django.security.injection.path-traversal.path-traversal-join`), but it is
+  **excluded from the curated packs** *and*, run directly, its OSS engine follows
+  only one variable indirection — so it misses the realistic two-hop
+  `request → name → os.path.join → path → open` form (the blog post's own vulnerable
+  pattern; bridging both hops needs Semgrep Pro's interprocedural taint). Bandit has
+  no path-traversal plugin at all. So the shipped rule gives *false confidence*, and
+  [`rules/path_traversal.yaml`](rules/path_traversal.yaml) supplies the one that
+  catches realistic code — keyed on the `os.path.join → open` hop and silent on the
+  `safe_join` fix.
 
 **Not every gap needs a custom rule.** **CSRF (Lab 08)** is the counter-example:
 the curated packs miss `@csrf_exempt`, but Semgrep already ships a rule for it in

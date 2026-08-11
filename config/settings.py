@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "labs.post_06_idor",
     "labs.post_07_privesc",
     "labs.post_08_csrf",
+    "labs.post_09_path_traversal",
     "labs.post_11_brute_force",
 ]
 

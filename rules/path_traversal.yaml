@@ -1,0 +1,61 @@
+rules:
+  - id: thiagoteixeira.django.security.path-traversal.ospath-join-reaches-open
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A filesystem path built with os.path.join() is passed to open(). os.path.join
+      does not contain its result: a '../' segment climbs out of the base directory,
+      and an absolute component (e.g. '/etc/passwd') discards the base entirely - so
+      if any component is user-controlled the caller can read any file the process
+      can. This is path traversal (CWE-22). Build the path with
+      django.utils._os.safe_join(), which raises SuspiciousFileOperation when the
+      resolved path escapes the base, or resolve the file through a FileField /
+      Storage instance instead of a raw path.
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      asvs: "V12.3.1"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/path-traversal-how-settings-py-escapes-your-media-directory-and-how-djangos-safe-join-stops-it/
+        - https://semgrep.dev/products/pro-engine/
+    # Why this rule exists (and is not just the community rule): a Django
+    # path-traversal rule DOES exist in the Semgrep registry
+    # (python.django.security.injection.path-traversal.path-traversal-join), but two
+    # things stop it from giving a usable scan-assert here, both empirically
+    # reproduced (see labs/post_09_path_traversal/scans/README.md):
+    #
+    #   1. It is EXCLUDED from the curated community packs. p/django, p/python and
+    #      p/owasp-top-ten (156 rules) report 0 even on the one-liner the rule
+    #      matches directly - the same audit/registry-tier exclusion as
+    #      avoid-mark-safe (Lab 02) and csrf-exempt (Lab 08).
+    #   2. Run directly it is a syntactic pattern-either, not taint, and the OSS
+    #      engine only follows ONE variable indirection. It fires on the inlined
+    #      open(os.path.join(base, request.GET.get(...))) and on a single-hop
+    #      variable form, but MISSES the realistic two-hop shape -
+    #          name = request.GET.get(...)
+    #          path = os.path.join(base, name)
+    #          open(path)
+    #      which is the blog post's own Vulnerable Pattern 1 and how real download
+    #      views are written. Bridging both hops needs Semgrep Pro's interprocedural
+    #      taint, absent from the community engine. (Bandit has no path-traversal
+    #      plugin at all: 0/0 on both views.)
+    #
+    # This rule is deliberately syntactic and keyed on the join->open SINGLE hop the
+    # OSS engine DOES handle: an open() whose path argument is - or was assigned -
+    # os.path.join(...). It therefore fires on the vulnerable view's multi-variable
+    # form and stays silent on the safe_join fix, which contains no os.path.join.
+    #
+    # Known limit (documented in rules/path_traversal.py): being syntactic and
+    # source-agnostic, it flags an os.path.join fed to open() even when every
+    # component is a hardcoded literal (a safe read) - a false positive marked
+    # todook. Confirming the joined path is actually user-controlled is the taint the
+    # OSS engine cannot do, which is the whole reason the class is under-served here.
+    patterns:
+      - pattern-either:
+          - pattern: open(os.path.join(...), ...)
+          - patterns:
+              - pattern: open($P, ...)
+              - pattern-inside: |
+                  $P = os.path.join(...)
+                  ...

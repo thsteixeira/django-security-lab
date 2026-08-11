@@ -1,0 +1,37 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 09 (Path Traversal)
+#
+# Command:  bandit -r labs/post_09_path_traversal/views_vulnerable.py \
+#                     labs/post_09_path_traversal/views_secure.py
+# Tool: Bandit 1.9.4  |  Captured: 2026-08-11
+# Result: 0 findings on BOTH views. Bandit has no path-traversal check: its ~42
+#         plugins are dangerous-CALL/construct tests (shell, eval, yaml.load,
+#         mark_safe, ssl...) matched on the AST, and it does no taint/dataflow to
+#         connect request.GET -> os.path.join -> open. The nearest plugin, B108,
+#         only flags a hardcoded /tmp path (hardcoded_tmp_directory) - unrelated.
+#         So Bandit gives no signal here, on the vulnerable view or the secure one.
+#         This is the class's SAST miss (Bandit half); see scans/README.md.
+# ============================================================================
+
+Run started:2026-08-11 07:28:56.535772+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 64
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):

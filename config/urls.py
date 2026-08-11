@@ -23,6 +23,9 @@ def index(request):
         "then /privesc/staff-area/ &mdash; log in first</li>"
         "<li>/csrf/vulnerable/transfer/ and /csrf/secure/transfer/ "
         "(POST to_account=bob, no token), then /csrf/account/ &mdash; log in first</li>"
+        '<li><a href="/path-traversal/vulnerable/?file=../flag.txt">/path-traversal/vulnerable/</a> '
+        'and <a href="/path-traversal/secure/?file=../flag.txt">/path-traversal/secure/</a> '
+        "(GET ?file=../flag.txt)</li>"
         "<li>/brute-force/vulnerable/login/ and /brute-force/secure/login/ "
         "(POST username=victim&amp;password=..., rotate X-Forwarded-For), then /brute-force/note/</li>"
         "</ul>"
@@ -40,5 +43,6 @@ urlpatterns = [
     path("idor/", include("labs.post_06_idor.urls")),
     path("privesc/", include("labs.post_07_privesc.urls")),
     path("csrf/", include("labs.post_08_csrf.urls")),
+    path("path-traversal/", include("labs.post_09_path_traversal.urls")),
     path("brute-force/", include("labs.post_11_brute_force.urls")),
 ]
