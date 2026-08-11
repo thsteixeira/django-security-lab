@@ -157,11 +157,12 @@ scan-assert the standard tools couldn't give. A hermetic CI job runs
 `semgrep --test` on the fixture and then that fire/silent assert on the two views.
 
 Bandit and Semgrep are pinned but **not bundled in the lab image** (same as CI,
-which installs them per-job). Either install them on the host —
-`pip install bandit==1.9.4 semgrep==1.170.0` — or run any command below inside
-the container by prefixing it, e.g.
-`docker compose run --rm web sh -c "pip install -q bandit==1.9.4 && bandit -r labs/post_06_idor/"`.
-All commands run from the repository root.
+which installs them per-job). Install them on the host —
+`pip install bandit==1.9.4 semgrep==1.170.0` — and run the commands below there.
+The `web` container is network-isolated for tier-3 containment (see
+[SECURITY.md](../../SECURITY.md)), so it cannot `pip install` a scanner; the host
+is the right place anyway, since SAST reads the source files directly. All
+commands run from the repository root.
 
 ```bash
 # the standard tools — miss the class (Bandit finds only a test-password false alarm)

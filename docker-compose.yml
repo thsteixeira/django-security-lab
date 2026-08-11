@@ -1,6 +1,15 @@
-# Local-only stack for the labs. Every port is bound to 127.0.0.1 (loopback),
+# Local-only stack for the labs. The lab is served on 127.0.0.1 (loopback) only,
 # so nothing here is reachable from your LAN or the internet. See SECURITY.md —
 # this project is intentionally vulnerable and must never be deployed publicly.
+#
+# B6 (tier-3 containment): the `web` container that runs the (intentionally
+# vulnerable) Django app sits on an `internal: true` network with NO route off
+# the host — an RCE in a tier-3 lab (command injection, deserialization) cannot
+# phone home, exfiltrate data, or pull a second-stage payload. Because an
+# internal network cannot publish a port, a tiny `gateway` proxy (socat) — which
+# runs no lab code and is not an attack target — bridges 127.0.0.1:8000 to the
+# isolated web container. Image builds still fetch pip packages; the isolation is
+# runtime-only, which is exactly the window an exploit runs in.
 services:
   db:
     image: postgres:16
@@ -8,10 +17,10 @@ services:
       POSTGRES_DB: lab
       POSTGRES_USER: lab
       POSTGRES_PASSWORD: lab
-    # No host port is published: the web container reaches Postgres over the
-    # compose network (POSTGRES_HOST=db), and publishing 5432 would collide with
-    # any local Postgres the developer already runs. If you want to inspect the
-    # lab DB from the host, add:  ports: ["127.0.0.1:5432:5432"]
+    # No host port is published: web reaches Postgres over the internal network
+    # (POSTGRES_HOST=db), and publishing 5432 would collide with any local
+    # Postgres the developer already runs.
+    networks: [labnet]
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,11 +37,33 @@ services:
              python manage.py runserver 0.0.0.0:8000"
     environment:
       POSTGRES_HOST: db
-    ports:
-      - "127.0.0.1:8000:8000"
+    # internal-only: reaches db, is reached by the gateway, but has no egress.
+    networks: [labnet]
     depends_on:
       db:
         condition: service_healthy
+
+  gateway:
+    # Publishes the lab on the host by forwarding 8000 -> web:8000. It bridges the
+    # internal network (to reach web) and an egress-capable network (to accept the
+    # host's published connection). It runs socat, not lab code, so its egress is
+    # not an RCE foothold; the vulnerable app in `web` stays fully isolated.
+    image: alpine/socat:1.8.0.0
+    command: ["-d", "TCP-LISTEN:8000,fork,reuseaddr", "TCP:web:8000"]
+    networks: [labnet, edge]
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - web
+
+networks:
+  # Externally isolated: web<->db<->gateway only, no route off the host at all.
+  labnet:
+    internal: true
+  # Egress-capable bridge, used ONLY so the gateway can accept the host's
+  # published connection. `web` is deliberately NOT on this network.
+  edge:
+    driver: bridge
 
 volumes:
   pgdata:

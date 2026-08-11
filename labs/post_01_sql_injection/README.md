@@ -100,8 +100,10 @@ from a clone, and the full unedited runs are committed under
 ### SAST — Bandit and Semgrep community
 
 Bandit and Semgrep are pinned but **not bundled in the lab image** (CI installs
-them per-job). Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0`
-— or prefix a command with `docker compose run --rm web sh -c "pip install -q <tool>==<version> && <command>"`.
+them per-job). Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0` — and run
+them there. The `web` container is network-isolated for tier-3 containment (see
+[SECURITY.md](../../SECURITY.md)), so it cannot `pip install` a scanner; the host
+is the right place anyway, since SAST reads the source files directly.
 
 ```bash
 bandit labs/post_01_sql_injection/views_vulnerable.py

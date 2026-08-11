@@ -79,8 +79,10 @@ pointed at each lab. Each lab README shows the exact commands and captured outpu
 
 The scanners are **not bundled in the image** (CI installs them per-job, pinned).
 Install what you need on the host — `pip install bandit==1.9.4 semgrep==1.170.0 pip-audit==2.9.0`
-(sqlmap ships separately) — or prefix any command with
-`docker compose run --rm web sh -c "pip install -q <tool>==<version> && <command>"`.
+(sqlmap ships separately) — and run them there. The `web` container is
+deliberately network-isolated for tier-3 containment (see [SECURITY.md](SECURITY.md)),
+so it cannot `pip install` a scanner; the host is the right place anyway, since
+SAST reads the source files and DAST hits the published port.
 
 ```bash
 # SAST — static analysis of the source

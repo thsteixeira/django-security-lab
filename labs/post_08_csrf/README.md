@@ -160,6 +160,8 @@ on the secure one. The captured runs are under [`scans/`](scans/); full reasonin
 (including the DAST/SameSite note) is in [`scans/README.md`](scans/README.md).
 
 Bandit and Semgrep are pinned but **not bundled in the lab image** (same as CI).
-Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0` — or
-prefix a command with `docker compose run --rm web sh -c "..."`. All commands run
-from the repository root.
+Install them on the host — `pip install bandit==1.9.4 semgrep==1.170.0` — and run
+them there. The `web` container is network-isolated for tier-3 containment (see
+[SECURITY.md](../../SECURITY.md)), so it cannot `pip install` a scanner; the host
+is the right place anyway, since SAST reads the source files directly. All
+commands run from the repository root.
