@@ -17,6 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Writable data area for labs that must write at runtime — e.g. Lab 04's uploads/
+# directory and its off-limits flag file. /app stays root-owned (read-only to the
+# app user); /data is labuser's.
+RUN mkdir -p /data && chown labuser:labuser /data
+
 # Drop root for everything that runs at container runtime (migrate, seed, tests,
 # runserver). pip install above ran as root, so the packages are in the shared
 # system site-packages and remain importable by labuser.

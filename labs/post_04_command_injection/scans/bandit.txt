@@ -1,0 +1,101 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 04 (OS Command Injection)
+#
+# Command:  bandit -r labs/post_04_command_injection/
+# Tool: Bandit 1.9.4  |  Captured: 2026-08-10
+# Result: B602 (subprocess_popen_with_shell_equals_true, HIGH) fires on
+#         views_vulnerable.py and is ABSENT on views_secure.py. That specific
+#         check is the shell-injection finding, and it is what CI asserts.
+#         Both files also carry low-severity subprocess noise that is NOT a
+#         shell-injection finding and fires regardless of safety: B404 (import
+#         subprocess) on both, and B603 (subprocess call) + B607 (partial
+#         executable path, "wc") on the secure view. See scans/README.md.
+# ============================================================================
+
+Run started:2026-08-11 04:17:10.849487+00:00
+
+Test results:
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: labs/post_04_command_injection/views_secure.py:14:0
+13	import os
+14	import subprocess
+15	
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b607_start_process_with_partial_path.html
+   Location: labs/post_04_command_injection/views_secure.py:37:13
+36	    path = os.path.join(str(UPLOAD_DIR), name)
+37	    result = subprocess.run(
+38	        ["wc", "-c", path],
+39	        shell=False,
+40	        capture_output=True,
+41	        text=True,
+42	    )
+43	    output = result.stdout + result.stderr
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: labs/post_04_command_injection/views_secure.py:39:13
+38	        ["wc", "-c", path],
+39	        shell=False,
+40	        capture_output=True,
+41	        text=True,
+42	    )
+43	    output = result.stdout + result.stderr
+44	    return HttpResponse(
+45	        f"<h1>Secure upload inspector</h1><pre>{escape(output)}</pre>"
+
+--------------------------------------------------
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: labs/post_04_command_injection/views_vulnerable.py:16:0
+15	"""
+16	import subprocess
+17	
+
+--------------------------------------------------
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: labs/post_04_command_injection/views_vulnerable.py:40:13
+39	        f"wc -c {name}",
+40	        shell=True,
+41	        cwd=str(UPLOAD_DIR),
+42	        capture_output=True,
+43	        text=True,
+44	    )
+45	    output = result.stdout + result.stderr
+46	    return HttpResponse(
+47	        f"<h1>Vulnerable upload inspector</h1><pre>{escape(output)}</pre>"
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 173
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 4
+		Medium: 0
+		High: 1
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 5
+Files skipped (0):

@@ -1,0 +1,60 @@
+# ============================================================================
+# SAST evidence - Semgrep community vs Lab 04 (OS Command Injection)
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#       labs/post_04_command_injection/views_vulnerable.py
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#       labs/post_04_command_injection/views_secure.py
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-10
+# Result: the curated community packs fire on the vulnerable view (subprocess-
+#         injection, dangerous-subprocess-use, subprocess-shell-true) and are
+#         SILENT on the secure list-form view - a clean fires-vulnerable /
+#         silent-secure split. No custom rule is needed (cf. Lab 01 / SQLi).
+# ============================================================================
+
+===== VULNERABLE view =====
+                   
+                   
+┌─────────────────┐
+│ 3 Code Findings │
+└─────────────────┘
+                                                                     
+  [36m[22m[24m  labs\post_04_command_injection\views_vulnerable.py[0m
+   ❯❯❱ python.django.security.injection.command.subprocess-injection.subprocess-injection
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected user input entering a `subprocess` call unsafely. This could result in a command injection 
+          vulnerability. An attacker could use this vulnerability to execute arbitrary commands on the host,  
+          which allows them to download malware, scan sensitive data, or run any command they wish on the     
+          server. Do not let users choose the command to run. In general, prefer to use Python API versions of
+          system commands. If you must use subprocess, use a dictionary to allowlist a set of commands.       
+          Details: https://sg.run/49BE                                                                        
+                                                                                                              
+           38┆ result = subprocess.run(
+           39┆     f"wc -c {name}",
+           40┆     shell=True,
+           41┆     cwd=str(UPLOAD_DIR),
+           42┆     capture_output=True,
+           43┆     text=True,
+           44┆ )
+   
+   ❯❯❱ python.lang.security.dangerous-subprocess-use.dangerous-subprocess-use
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Detected subprocess function 'inspect' with user controlled data. A malicious actor could leverage
+          this to perform command injection. You may consider using 'shlex.escape()'.                       
+          Details: https://sg.run/NWxp                                                                      
+                                                                                                            
+           39┆ f"wc -c {name}",
+   
+   ❯❯❱ python.lang.security.audit.subprocess-shell-true.subprocess-shell-true
+          [31m[1m[24m❰❰ Blocking ❱❱[0m
+          Found 'subprocess' function 'run' with 'shell=True'. This is dangerous because this call will spawn
+          the command using a shell process. Doing so propagates current shell settings and variables, which 
+          makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead.         
+          Details: https://sg.run/J92w                                                                       
+                                                                                                             
+           ▶▶┆ Autofix ▶ False
+           40┆ shell=True,
+
+
+===== SECURE view =====

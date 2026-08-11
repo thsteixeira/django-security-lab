@@ -57,6 +57,15 @@ jobs:
       # tool assert — theirs lives in the custom-rules job — and Lab 08 (CSRF)
       # carries one from Semgrep's AUDIT tier (added at the end of this job).
       #
+      # Lab 04 (OS command injection) is caught by the standard tools like Lab 01,
+      # so it also carries a scan-assert. Bandit's assert is B602-SPECIFIC (matched
+      # by test_id): B602 (shell=True) fires on the vulnerable view and is absent on
+      # the secure list-form view. Bandit's low-severity B603/B607/B404 fire on ANY
+      # subprocess use, safe or not, so a raw finding count would wrongly see the
+      # secure view as non-silent — hence the test_id filter. Semgrep community
+      # (p/python subprocess rules) fires on the vulnerable view and is silent on
+      # the secure one. See labs/post_04_command_injection/scans/README.md.
+      #
       # Lab 02 (XSS) is deliberately NOT asserted here, and adding an assert would
       # be a bug, not a fix: Bandit flags mark_safe() on BOTH views (it cannot see
       # the nh3.clean() inside the secure one) and Semgrep community reports
@@ -110,6 +119,28 @@ jobs:
           semgrep scan --config p/django --json --quiet \
             labs/post_01_sql_injection/views_secure.py > semgrep_secure.json
           python -c "import json,sys; n=len(json.load(open('semgrep_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Lab 04 (command injection) — Bandit B602 (shell=True), matched by test_id
+      # so the secure view's low-severity subprocess noise (B603/B607/B404) does
+      # not count as a finding.
+      - name: Bandit B602 fires on the command-injection vulnerable view
+        run: |
+          bandit -f json -o cmdinj_vuln.json labs/post_04_command_injection/views_vulnerable.py || true
+          python -c "import json,sys; n=sum(1 for r in json.load(open('cmdinj_vuln.json'))['results'] if r['test_id']=='B602'); print('B602 findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Bandit B602 is absent on the command-injection secure view
+        run: |
+          bandit -f json -o cmdinj_secure.json labs/post_04_command_injection/views_secure.py || true
+          python -c "import json,sys; n=sum(1 for r in json.load(open('cmdinj_secure.json'))['results'] if r['test_id']=='B602'); print('B602 findings:', n); sys.exit(0 if n == 0 else 1)"
+      - name: Semgrep community fires on the command-injection vulnerable view
+        run: |
+          semgrep scan --config p/django --config p/python --config p/owasp-top-ten --json --quiet \
+            labs/post_04_command_injection/views_vulnerable.py > cmdinj_sem_vuln.json
+          python -c "import json,sys; n=len(json.load(open('cmdinj_sem_vuln.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Semgrep community is silent on the command-injection secure view
+        run: |
+          semgrep scan --config p/django --config p/python --config p/owasp-top-ten --json --quiet \
+            labs/post_04_command_injection/views_secure.py > cmdinj_sem_secure.json
+          python -c "import json,sys; n=len(json.load(open('cmdinj_sem_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
 
       # Lab 08 (CSRF) — Semgrep's audit-tier @csrf_exempt rule. The curated packs
       # exclude it, so we point --config at the audit ruleset directly. Fires on

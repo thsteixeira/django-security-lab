@@ -15,6 +15,8 @@ def index(request):
         '<li><a href="/xss/secure/">/xss/secure/</a></li>'
         '<li><a href="/ssti/vulnerable/?tpl={{ flag }}">/ssti/vulnerable/</a></li>'
         '<li><a href="/ssti/secure/?tpl={{ flag }}">/ssti/secure/</a></li>'
+        "<li>/command-injection/vulnerable/ and /command-injection/secure/ "
+        "(POST name=sample.txt; cat ../flag.txt) &mdash; TIER 3, real RCE</li>"
         "<li>/idor/vulnerable/&lt;pk&gt;/ and /idor/secure/&lt;pk&gt;/ "
         "&mdash; log in first: POST /accounts/login/</li>"
         "<li>/privesc/vulnerable/ and /privesc/secure/ (POST role=staff), "
@@ -34,6 +36,7 @@ urlpatterns = [
     path("sql-injection/", include("labs.post_01_sql_injection.urls")),
     path("xss/", include("labs.post_02_xss.urls")),
     path("ssti/", include("labs.post_03_ssti.urls")),
+    path("command-injection/", include("labs.post_04_command_injection.urls")),
     path("idor/", include("labs.post_06_idor.urls")),
     path("privesc/", include("labs.post_07_privesc.urls")),
     path("csrf/", include("labs.post_08_csrf.urls")),
