@@ -1,14 +1,19 @@
 """Filesystem layout for the command-injection lab.
 
-`/app` is read-only to the non-root `labuser` (B6, tier-3 containment), so the
-lab's writable data lives under `/data` (created and chowned to labuser in the
-Dockerfile). The flag file sits one level ABOVE the upload directory: no
-legitimate code path — which only ever runs `wc -c` inside uploads/ — can reach
-it. Only the injection, which escapes that command, reads `../flag.txt`.
+The lab writes a small tree at runtime — an uploads/ directory to inspect and an
+off-limits flag file one level above it. It lives under the system temp dir so it
+is writable everywhere the tests run: the non-root `web` container (where /app is
+read-only), the native CI runner (which runs `manage.py test` directly, not in
+the image), and a local checkout.
+
+The flag sits one level ABOVE uploads/, so the inspector — which only ever runs
+`wc -c` inside uploads/ — has no legitimate way to reach it. Only the injection,
+which escapes that command, reads `../flag.txt`.
 """
+import tempfile
 from pathlib import Path
 
-CMDINJ_ROOT = Path("/data/cmdinj")
+CMDINJ_ROOT = Path(tempfile.gettempdir()) / "cmdinj"
 UPLOAD_DIR = CMDINJ_ROOT / "uploads"        # the inspector's working directory
 FLAG_PATH = CMDINJ_ROOT / "flag.txt"        # parent of uploads/ -> reached via ../flag.txt
 

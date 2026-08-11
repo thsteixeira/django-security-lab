@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # code/command execution (command injection, deserialization) cannot act as root
 # inside the container. /app stays root-owned and world-readable on purpose — an
 # exploit can read the lab code but not overwrite it. A lab that must write at
-# runtime (e.g. Lab 04's upload dir) creates and chowns its own writable path.
+# runtime (e.g. Lab 04's upload dir) writes under the system temp dir, which is
+# world-writable, so no per-lab chowned directory is needed here.
 RUN useradd --create-home --uid 10001 labuser
 
 WORKDIR /app
@@ -16,11 +17,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
-# Writable data area for labs that must write at runtime — e.g. Lab 04's uploads/
-# directory and its off-limits flag file. /app stays root-owned (read-only to the
-# app user); /data is labuser's.
-RUN mkdir -p /data && chown labuser:labuser /data
 
 # Drop root for everything that runs at container runtime (migrate, seed, tests,
 # runserver). pip install above ran as root, so the packages are in the shared

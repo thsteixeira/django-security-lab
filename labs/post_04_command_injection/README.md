@@ -70,7 +70,7 @@ curl -s -X POST http://127.0.0.1:8000/command-injection/secure/ \
 ```bash
 curl -s -X POST http://127.0.0.1:8000/command-injection/secure/ \
   --data-urlencode "name=sample.txt"
-# ... 29 /data/cmdinj/uploads/sample.txt
+# ... 29 /tmp/cmdinj/uploads/sample.txt
 ```
 
 Or prove all of it in one command (from the repo root):
