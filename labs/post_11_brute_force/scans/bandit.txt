@@ -1,0 +1,47 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 11 (Brute Force & Credential Stuffing)
+#
+# Command:  bandit -r labs/post_11_brute_force/
+# Tool: Bandit 1.9.4  |  Captured: 2026-08-09
+# Result: nothing on the views. The only finding is B105 on the seed's
+#         deliberately-weak victim password ('summer2024') - noise unrelated to
+#         the class. Bandit has no concept of "no rate limit" or "wrong throttle
+#         key." A MISS. See scans/README.md.
+# ============================================================================
+
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-08-09 19:48:57.669252+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'summer2024'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_11_brute_force/seed.py:15:18
+14	VICTIM = "victim"
+15	VICTIM_PASSWORD = "summer2024"  # deliberately weak — last entry of WORDLIST below
+16	
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 226
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):

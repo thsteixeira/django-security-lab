@@ -83,6 +83,14 @@ jobs:
       # explicitly below (registry-fetched, non-hermetic like the p/django steps)
       # — it fires on the vulnerable view and is silent on the secure one. See
       # labs/post_08_csrf/scans/README.md.
+      #
+      # Lab 11 (brute force) carries NO SAST assert of any kind — and none is
+      # possible. Its two flaws are a rate limit keyed on a forgeable value (the
+      # wrong KEY, a semantic judgement) and a missing per-account control (an
+      # ABSENCE). No tier matches either: Bandit only noises on the seed password,
+      # community Semgrep is 0/0, and the AUDIT tier finds only unrelated nits. Its
+      # gate is tests.py (the Django job) plus the dynamic curl XFF-rotation probe
+      # in the lab README. See labs/post_11_brute_force/scans/README.md.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true

@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "labs.post_06_idor",
     "labs.post_07_privesc",
     "labs.post_08_csrf",
+    "labs.post_11_brute_force",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -79,6 +80,14 @@ DATABASES = {
         "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
+}
+
+# Pinned so the throttle counters in Lab 11 behave identically under the test
+# runner and `runserver` (gate 3). LocMemCache is per-process — fine for the
+# single-process dev server and the tests (which clear() it) — but a multi-worker
+# production deployment would need a shared store (see labs/post_11_brute_force).
+CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

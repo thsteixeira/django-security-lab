@@ -48,6 +48,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 | 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
 | 08 | Cross-Site Request Forgery (CSRF) | [`labs/post_08_csrf/`](labs/post_08_csrf/) | SAST — curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule (`no-csrf-exempt`) catches it, so **no custom rule** — asserted in the SAST job |
+| 11 | Brute Force & Credential Stuffing | [`labs/post_11_brute_force/`](labs/post_11_brute_force/) | **No SAST tier finds it** (wrong-key + missing-control) — the gate is `tests.py` and a dynamic `curl` XFF-rotation probe |
 
 ## Run the labs
 
@@ -132,6 +133,17 @@ fires on the exempt view and stays silent on `@csrf_protect`. Writing our own
 would duplicate it — so Lab 08 ships no rule and instead teaches *audit-tier
 awareness*: run the audit tier, not just the default pack. The detection pass
 always checks that tier before deciding a rule is warranted.
+
+**Sometimes no tier finds it at all.** **Brute force (Lab 11)** is the honest
+floor: Bandit, the community packs, *and* the audit tier all report nothing on
+the login views, because both flaws are unmatchable by static analysis — a
+rate-limit keyed on the *wrong* value (a semantic judgement about who controls
+`X-Forwarded-For`) and the *absence* of a per-account control (there is no code
+to match). So Lab 11 ships no rule and no SAST scan-assert; its signal is
+**dynamic** — a `curl` loop that rotates a forged header and watches the limit
+fail to trigger — and its gate is `tests.py`. The lesson is the one CySA+ keeps
+returning to: some findings come from a threat-model review and a probe, not a
+scanner.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
