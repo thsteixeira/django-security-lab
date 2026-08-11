@@ -51,64 +51,16 @@ jobs:
       # for scanning with the same off-the-shelf rules an analyst runs.
       - run: pip install "bandit==1.9.4" "semgrep==1.170.0"
 
-      # Post 1 (SQL injection) is a class the standard tools catch, so it carries
-      # a scan-assert: both tools must flag the vulnerable view and stay silent on
-      # the secure one. Access-control classes (IDOR, privesc) carry no standard-
-      # tool assert — theirs lives in the custom-rules job — and Lab 08 (CSRF)
-      # carries one from Semgrep's AUDIT tier (added at the end of this job).
-      #
-      # Lab 02 (XSS) is deliberately NOT asserted here, and adding an assert would
-      # be a bug, not a fix: Bandit flags mark_safe() on BOTH views (it cannot see
-      # the nh3.clean() inside the secure one) and Semgrep community reports
-      # neither. "Fires on vulnerable, silent on secure" is false for this class,
-      # so Lab 02's gate is its tests.py. See labs/post_02_xss/scans/README.md.
-      #
-      # Lab 03 (SSTI) is likewise NOT asserted with the standard tools: both miss
-      # the Template() sink entirely (Bandit 0/0, community Semgrep 0/0), so the
-      # fire/silent assert lives in the custom-rules job below against
-      # rules/ssti.yaml. See labs/post_03_ssti/scans/README.md.
-      #
-      # Lab 04 (OS command injection) is caught by the standard tools like Lab 01,
-      # so it also carries a scan-assert. Bandit's assert is B602-SPECIFIC (matched
-      # by test_id): B602 (shell=True) fires on the vulnerable view and is absent on
-      # the secure list-form view. Bandit's low-severity B603/B607/B404 fire on ANY
-      # subprocess use, safe or not, so a raw finding count would wrongly see the
-      # secure view as non-silent — hence the test_id filter. Semgrep community
-      # (p/python subprocess rules) fires on the vulnerable view and is silent on
-      # the secure one. See labs/post_04_command_injection/scans/README.md.
-      #
-      # Lab 06 (IDOR) is the same story: a semantic authorization flaw with no
-      # dangerous call to match, so Bandit and community Semgrep both miss it and
-      # the assert lives in the custom-rules job against rules/idor.yaml. See
-      # labs/post_06_idor/scans/README.md.
-      #
-      # Lab 07 (privilege escalation / mass assignment) likewise: neither tool
-      # flags fields='__all__' (a Django-linter check, not SAST), so its assert
-      # lives in the custom-rules job against rules/mass_assignment.yaml. See
-      # labs/post_07_privesc/scans/README.md.
-      #
-      # Lab 08 (CSRF) needs NO custom rule: Semgrep already ships an @csrf_exempt
-      # rule, but in the AUDIT tier the curated packs exclude. We run that rule
-      # explicitly below (registry-fetched, non-hermetic like the p/django steps)
-      # — it fires on the vulnerable view and is silent on the secure one. See
-      # labs/post_08_csrf/scans/README.md.
-      #
-      # Lab 09 (path traversal) carries NO standard-tool assert here — its assert
-      # lives in the custom-rules job against rules/path_traversal.yaml. Bandit has
-      # no path-traversal plugin (0/0). Semgrep's Django path-traversal-join rule is
-      # registry-only (curated packs 0/0) AND, run directly, its OSS engine follows
-      # only one variable indirection: it misses the realistic two-hop
-      # request->name->join->path->open form the lab (and the post) actually use. So
-      # the shipped rule can't give a fire/silent assert on realistic code; the
-      # custom rule does. See labs/post_09_path_traversal/scans/README.md.
-      #
-      # Lab 11 (brute force) carries NO SAST assert of any kind — and none is
-      # possible. Its two flaws are a rate limit keyed on a forgeable value (the
-      # wrong KEY, a semantic judgement) and a missing per-account control (an
-      # ABSENCE). No tier matches either: Bandit only noises on the seed password,
-      # community Semgrep is 0/0, and the AUDIT tier finds only unrelated nits. Its
-      # gate is tests.py (the Django job) plus the dynamic curl XFF-rotation probe
-      # in the lab README. See labs/post_11_brute_force/scans/README.md.
+      # This job asserts only the labs the STANDARD tools catch — fire on the
+      # vulnerable view, silent on the secure one — with each lab's rationale beside
+      # its steps below: Lab 01 (SQLi), Lab 04 (command injection), Lab 08 (CSRF,
+      # via Semgrep's audit tier). Labs the standard tools MISS or can't-distinguish
+      # ship a custom rule and are asserted — and documented — in the custom-rules
+      # job below (02, 03, 06, 07, 09). Lab 11 (brute force) has no static signal in
+      # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
+
+      # Lab 01 (SQL injection) — the standard tools catch it cleanly: both fire on
+      # the vulnerable view and stay silent on the secure one.
       - name: Bandit fires on the vulnerable view
         run: |
           bandit -f json -o bandit_vuln.json labs/post_01_sql_injection/views_vulnerable.py || true
@@ -174,17 +126,26 @@ jobs:
         with:
           python-version: "3.13"
       # Hermetic: only the in-repo rules/ are used, nothing is fetched from the
-      # registry. This job exists because some labs ship a custom rule — the
-      # standard tools fall short on the Django-specific pattern. Lab 02 (XSS):
-      # Bandit flags both views, community Semgrep neither (can't distinguish).
-      # Lab 03 (SSTI): both tools report nothing at all (they miss the
-      # Template() sink). Lab 06 (IDOR): both miss it — a semantic authz flaw,
-      # no dangerous call to match. Lab 07 (privesc/mass assignment): both miss
-      # fields='__all__' (that's Django-linter territory, not SAST). Lab 09 (path
-      # traversal): the community rule is registry-only AND its OSS engine misses
-      # the realistic two-hop os.path.join->open form (Pro-taint territory), so a
-      # syntactic rule catches it. See rules/xss.yaml, rules/ssti.yaml,
-      # rules/idor.yaml, rules/mass_assignment.yaml, rules/path_traversal.yaml.
+      # registry. This job owns every lab whose class the STANDARD tools can't give
+      # a fire/silent assert on, so it ships a custom rule (§6.4.1). Each is
+      # documented once, here, beside its assert:
+      #   Lab 02 (XSS) — can't-distinguish: Bandit flags mark_safe() on BOTH views,
+      #     community Semgrep flags neither. rules/xss.yaml tells them apart.
+      #   Lab 03 (SSTI) — miss: both tools report nothing (no model of the
+      #     Template() sink). rules/ssti.yaml is the only rule that fires.
+      #   Lab 06 (IDOR) — miss: a semantic authz flaw, no dangerous call to match
+      #     (Semgrep's own docs prescribe a custom rule). rules/idor.yaml.
+      #   Lab 07 (privesc/mass assignment) — miss: fields='__all__' is Django-linter
+      #     territory (Ruff DJ007), not SAST. rules/mass_assignment.yaml.
+      #   Lab 09 (path traversal) — miss with a twist: the community
+      #     path-traversal-join rule is registry-only AND its OSS engine follows only
+      #     one variable indirection, missing the realistic two-hop os.path.join->open
+      #     form (Pro-taint territory) — a false green. rules/path_traversal.yaml
+      #     catches realistic code.
+      # (Labs the standard tools DO catch are asserted in the sast job: 01 SQLi and
+      # 04 command injection directly, 08 CSRF via Semgrep's audit tier. Lab 11
+      # brute force ships NO rule — a forgeable key + a missing control, unmatchable
+      # by any tier; gated by tests.py + a dynamic curl probe.)
       - run: pip install "semgrep==1.170.0"
 
       # 1. Every custom rule matches its stem-paired fixture.
@@ -237,8 +198,6 @@ jobs:
             labs/post_07_privesc/views_secure.py > rule_ma_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_ma_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
-      # Lab 09 (path traversal) — the community path-traversal-join rule misses the
-      # realistic two-hop os.path.join->open form, so this custom rule catches it.
       - name: Path-traversal rule fires on the vulnerable view
         run: |
           semgrep scan --config rules/path_traversal.yaml --json --quiet \
