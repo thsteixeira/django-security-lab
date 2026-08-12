@@ -1,0 +1,55 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 05 (XXE)
+#
+# Command:  bandit -r labs/post_05_xxe/views_vulnerable.py \
+#                     labs/post_05_xxe/views_secure.py
+# Tool: Bandit 1.9.4  |  Captured: 2026-08-11
+# Result: 0 findings on BOTH views. Bandit's XML checks target the STDLIB parsers
+#         by import/call name — B405/B314 fire on xml.etree(.fromstring),
+#         B313-B320 on minidom/sax/pulldom — and recommend defusedxml. But the
+#         vulnerable view here parses with lxml, and Bandit's lxml check (B410) was
+#         REMOVED: Bandit 1.9.4 reports "Unknown test found in profile: B410" when
+#         you ask for it. So Bandit has no rule that flags an lxml parse, and it is
+#         silent on both views. (Confirmation below: the same fromstring on stdlib
+#         xml.etree fires B405 + B314.) See scans/README.md.
+# ============================================================================
+
+Run started:2026-08-11 19:25:51.542220+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 58
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):
+
+
+# --- Contrast: the SAME parse on the STDLIB parser IS flagged --------------
+# $ cat p_stdlib.py
+#   import xml.etree.ElementTree as ET
+#   def f(b): return ET.fromstring(b)
+# $ bandit p_stdlib.py
+#   >> Issue: [B405:blacklist] Using xml.etree.ElementTree to parse untrusted XML
+#      data is known to be vulnerable to XML attacks. Replace ... with defusedxml ...
+#   >> Issue: [B314:blacklist] Using xml.etree.ElementTree.fromstring to parse
+#      untrusted XML data ... Replace ... with its defusedxml equivalent ...
+#
+# So Bandit flags the parser that modern Python already hardened (stdlib no longer
+# resolves external entities) and is blind to lxml — the parser that still performs
+# the file-read XXE. That inversion is the teaching point.
+
+# --- Confirmation that B410 (lxml) is gone in 1.9.4 ------------------------
+# $ bandit --tests B410 <any lxml file>
+#   [extension_loader] WARNING  Unknown test found in profile: B410

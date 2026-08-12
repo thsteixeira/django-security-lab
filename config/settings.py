@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "labs.post_02_xss",
     "labs.post_03_ssti",
     "labs.post_04_command_injection",
+    "labs.post_05_xxe",
     "labs.post_06_idor",
     "labs.post_07_privesc",
     "labs.post_08_csrf",

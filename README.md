@@ -46,6 +46,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 02 | Cross-Site Scripting (XSS) | [`labs/post_02_xss/`](labs/post_02_xss/) | SAST — the standard tools can't split bug from fix, so a **custom rule** ([`rules/xss.yaml`](rules/xss.yaml)) does, asserted in a hermetic CI job |
 | 03 | Server-Side Template Injection (SSTI) | [`labs/post_03_ssti/`](labs/post_03_ssti/) | SAST — the standard tools **miss** the `Template()` sink entirely, so a **custom rule** ([`rules/ssti.yaml`](rules/ssti.yaml)) catches it, asserted in the same hermetic CI job |
 | 04 | OS Command Injection ⚠️ tier 3 | [`labs/post_04_command_injection/`](labs/post_04_command_injection/) | SAST — Bandit `B602` (shell=True) and Semgrep community both **catch** it (fire on vulnerable, silent on secure), asserted in CI; no custom rule (cf. SQLi) |
+| 05 | XXE (XML External Entity) | [`labs/post_05_xxe/`](labs/post_05_xxe/) | SAST — the standard tools flag the *stdlib* parsers but **miss lxml** (Bandit's `B410` was removed; Semgrep community + registry are 0), so a **custom rule** ([`rules/xxe.yaml`](rules/xxe.yaml)) flags the lxml footgun, asserted in the hermetic CI job |
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 | 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
 | 08 | Cross-Site Request Forgery (CSRF) | [`labs/post_08_csrf/`](labs/post_08_csrf/) | SAST — curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule (`no-csrf-exempt`) catches it, so **no custom rule** — asserted in the SAST job |
@@ -118,6 +119,13 @@ catch it. Several do:
 - **SSTI-via-`Template()` (Lab 03)** — the *miss* case: Bandit and community
   Semgrep both report nothing at all (neither models the `Template()` sink), so
   [`rules/ssti.yaml`](rules/ssti.yaml) supplies the only rule that fires.
+- **XXE-via-`lxml` (Lab 05)** — the *miss* case with an inversion: Bandit flags
+  the **stdlib** parsers (`B405`/`B314`) but its lxml check `B410` was removed, so
+  it's 0/0 on the lxml view; Semgrep community and the full registry are 0 too. The
+  parser the tools catch is the one modern Python already hardened; **lxml**, the
+  one that still performs the file read, is invisible — so
+  [`rules/xxe.yaml`](rules/xxe.yaml) flags the lxml footgun and stays silent on the
+  `defusedxml` fix.
 - **IDOR (Lab 06)** — the *miss* case again, for a deeper reason: it's a semantic
   authorization flaw (the vulnerable and fixed code differ only by
   `owner=request.user`), so Bandit ships no plugin for it and community Semgrep

@@ -5,3 +5,8 @@ psycopg[binary]==3.3.4
 # Allowlist HTML sanitiser (Rust/Ammonia bindings). Lab 02's secure view runs
 # untrusted comment HTML through it before mark_safe().
 nh3==0.3.6
+# XML parsing for Lab 05 (XXE). lxml is the fast libxml2 parser the vulnerable
+# view leaves entity-resolving (the XXE surface); defusedxml is the secure
+# drop-in that refuses DTDs/entities. Both pip-audit-clean at these pins.
+lxml==6.1.1
+defusedxml==0.7.1

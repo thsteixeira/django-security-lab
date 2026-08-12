@@ -133,6 +133,9 @@ jobs:
       #     community Semgrep flags neither. rules/xss.yaml tells them apart.
       #   Lab 03 (SSTI) — miss: both tools report nothing (no model of the
       #     Template() sink). rules/ssti.yaml is the only rule that fires.
+      #   Lab 05 (XXE) — miss: Bandit flags the STDLIB parsers but its lxml check
+      #     (B410) was removed, so it is 0/0 on the lxml view; Semgrep community and
+      #     registry are 0 too. rules/xxe.yaml flags the lxml footgun.
       #   Lab 06 (IDOR) — miss: a semantic authz flaw, no dangerous call to match
       #     (Semgrep's own docs prescribe a custom rule). rules/idor.yaml.
       #   Lab 07 (privesc/mass assignment) — miss: fields='__all__' is Django-linter
@@ -175,6 +178,20 @@ jobs:
           semgrep scan --config rules/ssti.yaml --json --quiet \
             labs/post_03_ssti/views_secure.py > rule_ssti_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_ssti_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Lab 05 (XXE) — the standard tools miss the lxml parse (Bandit's B410 lxml
+      # check was removed; community + registry Semgrep are 0), so this custom rule
+      # flags the lxml footgun and stays silent on the defusedxml fix.
+      - name: XXE rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/xxe.yaml --json --quiet \
+            labs/post_05_xxe/views_vulnerable.py > rule_xxe_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_xxe_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: XXE rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/xxe.yaml --json --quiet \
+            labs/post_05_xxe/views_secure.py > rule_xxe_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_xxe_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
       - name: IDOR rule fires on the vulnerable view
         run: |

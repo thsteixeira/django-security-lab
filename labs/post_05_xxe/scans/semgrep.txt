@@ -1,0 +1,51 @@
+# ============================================================================
+# SAST evidence - Semgrep vs Lab 05 (XXE)
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-11
+#
+#  (A) Community/registry MISS the lxml XXE:
+#        semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#            labs/post_05_xxe/views_vulnerable.py   -> 0 findings
+#            labs/post_05_xxe/views_secure.py       -> 0 findings
+#        semgrep scan --config r/python  (full registry, 371 rules)
+#            labs/post_05_xxe/views_vulnerable.py   -> 0 findings
+#      The registry has an XXE rule (use-defused-xml-parse), but run directly it
+#      fires on NEITHER the lxml view NOR a stdlib xml.etree.fromstring probe -
+#      it targets .parse()-style stdlib sinks, not this shape.
+#
+#  (C) The repo's custom rule (rules/xxe.yaml) catches the lxml footgun and is
+#      silent on the defusedxml fix - the scan-assert this class otherwise can't
+#      have. Asserted in the hermetic custom-rules CI job.
+#        semgrep scan --config rules/xxe.yaml \
+#            labs/post_05_xxe/views_vulnerable.py   -> 1 finding
+#            labs/post_05_xxe/views_secure.py       -> 0 findings
+# ============================================================================
+
+===== (A) Community curated packs — p/django + p/python + p/owasp-top-ten =====
+
+VULNERABLE view (lxml):   Ran 156 rules on 1 file: 0 findings.
+SECURE view (defusedxml): Ran 156 rules on 1 file: 0 findings.
+
+===== (A') Full python registry — r/python =====
+
+VULNERABLE view (lxml):   Ran 371 rules on 1 file: 0 findings.
+
+# The registry's XXE rule, asked for directly, fires on neither shape here:
+#   r/python.lang.security.use-defused-xml-parse
+#     labs/post_05_xxe/views_vulnerable.py        -> 0 findings
+#     (a stdlib `ET.fromstring(b)` probe)          -> 0 findings
+
+
+===== (C) Custom rule — rules/xxe.yaml =====
+
+VULNERABLE view (etree.XMLParser(resolve_entities=True) + etree.fromstring):
+ • Findings: 1 (1 blocking)
+    rules.thiagoteixeira.django.security.xxe.lxml-parse-without-defusedxml
+Ran 1 rule on 1 file: 1 finding.
+
+SECURE view (defusedxml.ElementTree):
+Ran 1 rule on 1 file: 0 findings.
+
+# Fixture (rules/xxe.py) via `semgrep --test`: 1/1 all tests passed — the rule
+# fires on the explicit resolve_entities=True footgun and a bare lxml parse, and
+# is silent on the defusedxml fix AND the hardened-lxml (parser=) fix.

@@ -1,0 +1,48 @@
+rules:
+  - id: thiagoteixeira.django.security.xxe.lxml-parse-without-defusedxml
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Untrusted XML is being parsed with lxml (etree) rather than defusedxml. Either
+      it turns entity resolution on explicitly (resolve_entities=True → XXE: a
+      file:// external entity reads local files, an http:// one becomes SSRF to the
+      cloud metadata endpoint), or it relies on libxml2's version-dependent defaults,
+      which is fragile. Route the parse through defusedxml.ElementTree (forbids DTDs
+      and entities), or build a hardened lxml parser (resolve_entities=False,
+      no_network=True, load_dtd=False).
+    metadata:
+      owasp: "A05:2021 - Security Misconfiguration"
+      cwe:
+        - "CWE-611: Improper Restriction of XML External Entity Reference"
+        - "CWE-776: Improper Restriction of Recursive Entity References ('XML Entity Expansion')"
+      asvs: "V5.5.2"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/xxe-and-xml-bombs-why-you-should-think-twice-before-parsing-xml-in-python/
+        - https://github.com/PyCQA/bandit/issues/767
+    # Why this rule exists (and is not just a community rule): the standard tools
+    # MISS lxml XXE, empirically reproduced (see labs/post_05_xxe/scans/README.md).
+    # Bandit's XML checks (B313-B320 / B405-B407) target the STDLIB parsers by import
+    # name — they fire on xml.etree / minidom / sax and recommend defusedxml — but
+    # Bandit's lxml check B410 was REMOVED (Bandit 1.9.4 reports "Unknown test found
+    # in profile: B410"), so Bandit is 0/0 on an lxml parse. Semgrep community packs
+    # and the full r/python registry (371 rules) are also 0 on the lxml view. No
+    # shipped rule gives a fire/silent assert on the lxml XXE the lab needs — and lxml
+    # is exactly the parser required for a real file read, because modern stdlib
+    # ElementTree no longer resolves external entities (so the parser the tools DO
+    # flag is the already-hardened one).
+    #
+    # It fires on the explicit footgun (resolve_entities=True) and on a bare lxml
+    # parse relying on implicit defaults, and is silent when the parse goes through
+    # defusedxml or a parser= object (the hardened "Rule 2" form).
+    #
+    # Known limits (documented in rules/xxe.py): it is name-based (keys on an `etree`
+    # receiver, so `import defusedxml.ElementTree as etree` would be a false positive),
+    # and source-agnostic (it cannot confirm the bytes are actually untrusted). A
+    # bare hardened parser passed via parser= is correctly not flagged.
+    patterns:
+      - pattern-either:
+          - pattern: etree.XMLParser(..., resolve_entities=True, ...)
+          - pattern: etree.fromstring($X)
+          - pattern: etree.parse($X)
+          - pattern: etree.XML($X)
