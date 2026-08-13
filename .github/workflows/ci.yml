@@ -56,7 +56,7 @@ jobs:
       # its steps below: Lab 01 (SQLi), Lab 04 (command injection), Lab 08 (CSRF,
       # via Semgrep's audit tier). Labs the standard tools MISS or can't-distinguish
       # ship a custom rule and are asserted — and documented — in the custom-rules
-      # job below (02, 03, 06, 07, 09). Lab 11 (brute force) has no static signal in
+      # job below (02, 03, 05, 06, 07, 09, 10). Lab 11 (brute force) has no static signal in
       # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
 
       # Lab 01 (SQL injection) — the standard tools catch it cleanly: both fire on
@@ -138,8 +138,12 @@ jobs:
       #     registry are 0 too. rules/xxe.yaml flags the lxml footgun.
       #   Lab 06 (IDOR) — miss: a semantic authz flaw, no dangerous call to match
       #     (Semgrep's own docs prescribe a custom rule). rules/idor.yaml.
-      #   Lab 07 (privesc/mass assignment) — miss: fields='__all__' is Django-linter
-      #     territory (Ruff DJ007), not SAST. rules/mass_assignment.yaml.
+      #   Lab 07 (privesc) + Lab 10 (mass assignment) — miss: fields='__all__' is
+      #     Django-linter territory (Ruff DJ007), not SAST; Semgrep community AND
+      #     registry are 0. ONE rule (rules/mass_assignment.yaml) serves both — it
+      #     keys on fields="__all__" in a class Meta, so it fires on Lab 07's
+      #     ModelForm and Lab 10's DRF ModelSerializer alike (07 over-posts a
+      #     permission field -> A01; 10 over-posts a business field -> A08).
       #   Lab 09 (path traversal) — miss with a twist: the community
       #     path-traversal-join rule is registry-only AND its OSS engine follows only
       #     one variable indirection, missing the realistic two-hop os.path.join->open
@@ -214,6 +218,20 @@ jobs:
           semgrep scan --config rules/mass_assignment.yaml --json --quiet \
             labs/post_07_privesc/views_secure.py > rule_ma_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_ma_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Same rule, DRF ModelSerializer side (Lab 10). The serializer's
+      # fields="__all__" makes price/paid/owner writable — over-posting forges the
+      # order's integrity (A08), the sibling of Lab 07's permission escalation.
+      - name: Mass-assignment rule fires on the Lab 10 (DRF) vulnerable view
+        run: |
+          semgrep scan --config rules/mass_assignment.yaml --json --quiet \
+            labs/post_10_mass_assignment/views_vulnerable.py > rule_ma10_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_ma10_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Mass-assignment rule is silent on the Lab 10 (DRF) secure view
+        run: |
+          semgrep scan --config rules/mass_assignment.yaml --json --quiet \
+            labs/post_10_mass_assignment/views_secure.py > rule_ma10_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_ma10_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
       - name: Path-traversal rule fires on the vulnerable view
         run: |

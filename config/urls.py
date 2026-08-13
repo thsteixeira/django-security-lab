@@ -30,6 +30,9 @@ def index(request):
         "(GET ?file=../flag.txt)</li>"
         "<li>/brute-force/vulnerable/login/ and /brute-force/secure/login/ "
         "(POST username=victim&amp;password=..., rotate X-Forwarded-For), then /brute-force/note/</li>"
+        "<li>/mass-assignment/vulnerable/orders/&lt;pk&gt;/ and "
+        "/mass-assignment/secure/orders/&lt;pk&gt;/ "
+        "(PATCH price=0.00&amp;paid=true), then /mass-assignment/receipt/&lt;pk&gt;/</li>"
         "</ul>"
     )
 
@@ -47,5 +50,6 @@ urlpatterns = [
     path("privesc/", include("labs.post_07_privesc.urls")),
     path("csrf/", include("labs.post_08_csrf.urls")),
     path("path-traversal/", include("labs.post_09_path_traversal.urls")),
+    path("mass-assignment/", include("labs.post_10_mass_assignment.urls")),
     path("brute-force/", include("labs.post_11_brute_force.urls")),
 ]

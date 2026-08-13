@@ -1,0 +1,39 @@
+# Semgrep custom rule — Lab 10 (Mass Assignment)
+#
+# Command : semgrep scan --config rules/mass_assignment.yaml <view>
+# Tool    : semgrep 1.170.0
+# Date    : 2026-08-13
+#
+# rules/mass_assignment.yaml is SHARED with Lab 07 (privilege escalation).
+# The rule keys on 'fields = "__all__"' inside a class Meta, so it is
+# framework-agnostic: it fires on Lab 07's ModelForm AND on Lab 10's DRF
+# ModelSerializer. Fires on the vulnerable view (line 25), silent on the
+# secure one. Asserted in the hermetic custom-rules CI job for BOTH labs.
+# ============================================================================
+
+## VULNERABLE — expect 1 finding (the fields='__all__' serializer)
+## $ semgrep scan --config rules/mass_assignment.yaml \
+##     labs/post_10_mass_assignment/views_vulnerable.py
+
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                                    
+    labs\post_10_mass_assignment\views_vulnerable.py
+    ❯❱ rules.thiagoteixeira.django.security.mass-assignment.model-fields-all
+          ❰❰ Blocking ❱❱
+          A ModelForm/ModelSerializer Meta uses fields = "__all__", so every field on the model is bindable   
+          from the request â€” including any permission field (is_staff, is_superuser, role) or otherwise     
+          sensitive column. This is a mass-assignment (over-posting) sink: a client can set fields the feature
+          never meant to expose, e.g. POST role=staff to self-promote. Enumerate an explicit allowlist        
+          instead: fields = ["display_name", "bio"].                                                          
+                                                                                                              
+           25┆ fields = "__all__"  # DANGER: price, paid, status, owner are all writable
+
+
+## SECURE — expect 0 findings (explicit fields + read_only_fields)
+## $ semgrep scan --config rules/mass_assignment.yaml \
+##     labs/post_10_mass_assignment/views_secure.py
+

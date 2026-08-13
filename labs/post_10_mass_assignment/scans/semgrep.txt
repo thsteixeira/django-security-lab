@@ -1,0 +1,26 @@
+# Semgrep (community packs + registry) — Lab 10 (Mass Assignment)
+#
+# Tool : semgrep 1.170.0
+# Date : 2026-08-13
+#
+# The post's own detection guidance claims 'semgrep --config p/django flags
+# fields="__all__" on serializers'. Checked directly, it does NOT — the same
+# inaccuracy corrected for Post 7. Every shipped tier reports 0 on the DRF
+# ModelSerializer(fields='__all__') sink; only the custom rule catches it
+# (see semgrep-custom-rule.txt).
+# ============================================================================
+
+## 1. Community packs on the VULNERABLE view (fields='__all__')
+## $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+##     labs/post_10_mass_assignment/views_vulnerable.py
+
+
+## 2. Community packs on the SECURE view (explicit fields + read_only_fields)
+## $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+##     labs/post_10_mass_assignment/views_secure.py
+
+
+## 3. Registry tier on the VULNERABLE view — checked before concluding 'miss'
+## $ semgrep scan --config r/python.django --config r/python \
+##     labs/post_10_mass_assignment/views_vulnerable.py
+

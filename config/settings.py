@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",       # B1 — the auth/session stack the Wave 2 labs need
     "django.contrib.sessions",   # B1 — session-cookie auth (Series II/III labs)
     "django.contrib.staticfiles",
+    "rest_framework",            # B4 — DRF stack, introduced with Lab 10 (mass assignment)
     "labs",
     "labs.post_01_sql_injection",
     "labs.post_02_xss",
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "labs.post_07_privesc",
     "labs.post_08_csrf",
     "labs.post_09_path_traversal",
+    "labs.post_10_mass_assignment",
     "labs.post_11_brute_force",
 ]
 

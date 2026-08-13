@@ -10,3 +10,8 @@ nh3==0.3.6
 # drop-in that refuses DTDs/entities. Both pip-audit-clean at these pins.
 lxml==6.1.1
 defusedxml==0.7.1
+# Django REST Framework — the B4 "DRF stack" decision, introduced with Lab 10
+# (mass assignment). The vulnerable view's ModelSerializer(fields="__all__") is
+# the over-posting sink; the secure view uses an explicit fields list +
+# read_only_fields. Reused by the later API/JWT/OAuth2 labs (Wave 5).
+djangorestframework==3.16.1
