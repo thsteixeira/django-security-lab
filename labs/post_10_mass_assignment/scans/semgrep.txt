@@ -1,26 +1,105 @@
-# Semgrep (community packs + registry) — Lab 10 (Mass Assignment)
+# ============================================================================
+# SAST evidence - Semgrep (community packs + registry) vs Lab 10 (Mass Assignment)
 #
-# Tool : semgrep 1.170.0
-# Date : 2026-08-13
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_10_mass_assignment/views_vulnerable.py   (and views_secure.py)
+#   semgrep scan --config r/python.django --config r/python \
+#           labs/post_10_mass_assignment/views_vulnerable.py
 #
-# The post's own detection guidance claims 'semgrep --config p/django flags
-# fields="__all__" on serializers'. Checked directly, it does NOT — the same
-# inaccuracy corrected for Post 7. Every shipped tier reports 0 on the DRF
-# ModelSerializer(fields='__all__') sink; only the custom rule catches it
-# (see semgrep-custom-rule.txt).
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-13
+# Result: 0 findings at EVERY shipped tier on the DRF ModelSerializer
+#         fields='__all__' sink. The post's own detection guidance in an early
+#         draft claimed 'semgrep --config p/django flags fields="__all__" on
+#         serializers' - checked directly, it does NOT, the same inaccuracy
+#         corrected for Post 7. The community packs miss it, and so does the
+#         registry tier (r/python.django, r/python) checked before concluding
+#         'miss'. Only the custom rule catches it (see semgrep-custom-rule.txt).
+#         A MISS. See scans/README.md.
 # ============================================================================
 
 ## 1. Community packs on the VULNERABLE view (fields='__all__')
-## $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
-##     labs/post_10_mass_assignment/views_vulnerable.py
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_10_mass_assignment/views_vulnerable.py
+
+
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 565 Code rules:
+
+  Language      Rules   Files          Origin      Rules
+ ─────────────────────────────        ───────────────────
+  python          151       1          Community     565
+  <multilang>       5       1
+
+
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
 
 
 ## 2. Community packs on the SECURE view (explicit fields + read_only_fields)
-## $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
-##     labs/post_10_mass_assignment/views_secure.py
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_10_mass_assignment/views_secure.py
 
 
-## 3. Registry tier on the VULNERABLE view — checked before concluding 'miss'
-## $ semgrep scan --config r/python.django --config r/python \
-##     labs/post_10_mass_assignment/views_vulnerable.py
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 565 Code rules:
 
+  Language      Rules   Files          Origin      Rules
+ ─────────────────────────────        ───────────────────
+  python          151       1          Community     565
+  <multilang>       5       1
+
+
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+## 3. Registry tier on the VULNERABLE view - checked before concluding 'miss'
+$ semgrep scan --config r/python.django --config r/python labs/post_10_mass_assignment/views_vulnerable.py
+
+
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 378 Code rules:
+
+  Language      Rules   Files          Origin      Rules
+ ─────────────────────────────        ───────────────────
+  python          368       1          Community     378
+  <multilang>       3       1
+
+
+
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 371
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 371 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
