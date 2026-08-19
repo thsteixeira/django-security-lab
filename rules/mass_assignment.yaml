@@ -16,6 +16,7 @@ rules:
       confidence: HIGH
       references:
         - https://thiagoteixeira.tech/blog/privilege-escalation-how-fields-all-hands-every-user-the-keys-to-your-django-admin/
+        - https://thiagoteixeira.tech/blog/mass-assignment-how-over-posting-rewrites-fields-your-form-never-showed-and-how-explicit-field-lists-stop-it/
         - https://docs.astral.sh/ruff/rules/django-all-with-model-form/
     # Why this rule exists (and is not a community rule): the standard SAST tools
     # MISS this class. Bandit ships 42 plugin tests, all dangerous-CALL/construct
