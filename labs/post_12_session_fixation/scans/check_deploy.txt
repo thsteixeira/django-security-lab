@@ -1,0 +1,26 @@
+# ============================================================================
+# Detection evidence - Django's own deploy scanner vs Lab 12 (Session Fixation)
+#
+# Command:
+#   docker compose run --rm web python manage.py check --deploy
+#
+# Tool: Django 5.2 system check framework (--deploy)  |  Captured: 2026-08-19
+# Result: this post's detection centrepiece. There is no SAST rule for session
+#         fixation (it is the ABSENCE of cycle_key(), nothing to match) and no
+#         custom rule is possible - but Django SHIPS a deployment scanner, and it
+#         flags the cookie half directly. security.W012 names the exact Firesheep
+#         lesson ("network traffic sniffers to hijack user sessions"). The other
+#         four warnings are the general deploy checklist for this lab's minimal
+#         settings (DEBUG=True, no SecurityMiddleware/CSRF/XFrame). See README.md.
+# ============================================================================
+
+System check identified some issues:
+
+WARNINGS:
+?: (security.W001) You do not have 'django.middleware.security.SecurityMiddleware' in your MIDDLEWARE so the SECURE_HSTS_SECONDS, SECURE_CONTENT_TYPE_NOSNIFF, SECURE_REFERRER_POLICY, SECURE_CROSS_ORIGIN_OPENER_POLICY, and SECURE_SSL_REDIRECT settings will have no effect.
+?: (security.W002) You do not have 'django.middleware.clickjacking.XFrameOptionsMiddleware' in your MIDDLEWARE, so your pages will not be served with an 'x-frame-options' header. Unless there is a good reason for your site to be served in a frame, you should consider enabling this header to help prevent clickjacking attacks.
+?: (security.W003) You don't appear to be using Django's built-in cross-site request forgery protection via the middleware ('django.middleware.csrf.CsrfViewMiddleware' is not in your MIDDLEWARE). Enabling the middleware is the safest approach to ensure you don't leave any holes.
+?: (security.W012) SESSION_COOKIE_SECURE is not set to True. Using a secure-only session cookie makes it more difficult for network traffic sniffers to hijack user sessions.
+?: (security.W018) You should not have DEBUG set to True in deployment.
+
+System check identified 5 issues (0 silenced).

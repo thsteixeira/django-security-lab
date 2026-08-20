@@ -1,0 +1,32 @@
+# ============================================================================
+# SAST evidence - Semgrep (community + registry tiers) vs Lab 12 (Session Fixation)
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#           labs/post_12_session_fixation/
+#   semgrep scan --config r/python.django --config r/python \
+#           labs/post_12_session_fixation/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-19
+# Result: community packs 0 findings. The registry/audit tier reports 5 findings,
+#         ALL unrelated to the class - 'direct-use-of-httpresponse' on the lab's
+#         plain HttpResponse views (the same audit-tier XSS nit seen in Labs 08/11)
+#         plus one 'is-function-without-parentheses' maintainability nit. Nothing
+#         targets session rotation or fixation, because the flaw is the ABSENCE of
+#         cycle_key() - there is no syntactic shape to write a rule against, so
+#         (like Lab 11) this lab ships no custom rule. See scans/README.md.
+# ============================================================================
+
+## 1. Community packs
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_12_session_fixation/
+Ran 156 rules on 16 files: 0 findings.
+
+## 2. Registry / audit tier - checked before concluding 'no rule fits'
+$ semgrep scan --config r/python.django --config r/python labs/post_12_session_fixation/
+Ran 372 rules on 16 files: 5 findings.
+
+# Findings by rule (all unrelated to session fixation):
+#   3x  python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+#   +   python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+#       (5 line-level findings total; the audit XSS rule fires on any HttpResponse
+#        carrying a variable, regardless of the escape() the views apply.)

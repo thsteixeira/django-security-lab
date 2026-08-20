@@ -33,6 +33,9 @@ def index(request):
         "<li>/mass-assignment/vulnerable/orders/&lt;pk&gt;/ and "
         "/mass-assignment/secure/orders/&lt;pk&gt;/ "
         "(PATCH price=0.00&amp;paid=true), then /mass-assignment/receipt/&lt;pk&gt;/</li>"
+        "<li>/session/whoami/ (grab a sessionid), then POST bob's login to "
+        "/session/vulnerable/login/ carrying it, then /session/secret/ &mdash; "
+        "session fixation vs. /session/secure/login/ which rotates</li>"
         "</ul>"
     )
 
@@ -52,4 +55,5 @@ urlpatterns = [
     path("path-traversal/", include("labs.post_09_path_traversal.urls")),
     path("mass-assignment/", include("labs.post_10_mass_assignment.urls")),
     path("brute-force/", include("labs.post_11_brute_force.urls")),
+    path("session/", include("labs.post_12_session_fixation.urls")),
 ]
