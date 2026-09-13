@@ -10,7 +10,11 @@ rules:
       never meant to expose, e.g. POST role=staff to self-promote. Enumerate an
       explicit allowlist instead: fields = ["display_name", "bio"].
     metadata:
-      owasp: "A08:2021 - Software and Data Integrity Failures"
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A08:2021 - Software and Data Integrity Failures"
+        - "A08:2025 - Software or Data Integrity Failures"
       cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
       asvs: "V5.1.2"
       confidence: HIGH

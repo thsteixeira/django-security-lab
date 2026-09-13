@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A03:2021 — Injection |
+| **OWASP** | A05:2025 — Injection |
 | **CWE** | CWE-89 — Improper Neutralization of Special Elements used in an SQL Command |
 | **ASVS** | V5.3.4 — parameterised queries / ORM |
 | **Detection** | SAST (Bandit + Semgrep community) · DAST (sqlmap) — no custom rule needed |

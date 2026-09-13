@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A01:2021 — Broken Access Control |
+| **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-352 — Cross-Site Request Forgery |
 | **ASVS** | V4.2.2 — verify anti-CSRF defences on state-changing operations |
 | **Detection** | SAST — the curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule catches it (no custom rule needed), asserted in CI (see Scanning it) |

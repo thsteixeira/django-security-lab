@@ -6,7 +6,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A08:2021 — Software & Data Integrity Failures (CWE-915) |
+| **OWASP** | A08:2025 — Software or Data Integrity Failures (CWE-915) |
 | **CWE** | CWE-915 — Improperly Controlled Modification of Dynamically-Determined Object Attributes |
 | **ASVS** | V5.1.2 — the application is protected against mass parameter assignment |
 | **Detection** | SAST — the standard tools **miss** the class (Bandit 0, Semgrep community **and** registry 0), so the **custom rule** [`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml) — **shared with Lab 07** — flags `fields='__all__'`, asserted in the hermetic CI job |

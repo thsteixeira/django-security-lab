@@ -6,7 +6,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A05:2021 — Security Misconfiguration |
+| **OWASP** | A02:2025 — Security Misconfiguration |
 | **CWE** | CWE-611 (XML External Entity Reference) · CWE-776 (Recursive Entity Expansion) |
 | **ASVS** | V5.5.2 — the XML parser is configured to disable external entity and DTD processing |
 | **Detection** | SAST — the standard tools **miss** the lxml parse (Bandit's lxml check `B410` was removed; Semgrep community + registry are 0), so a **custom rule** ([`rules/xxe.yaml`](../../rules/xxe.yaml)) flags the lxml footgun, asserted in the hermetic CI job |

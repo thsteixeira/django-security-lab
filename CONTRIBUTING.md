@@ -62,7 +62,9 @@ When a rule is warranted, add the pair `rules/foo.yaml` + `rules/foo.py`:
   passes. Full metadata block:
   ```yaml
   metadata:
-    owasp: "A01:2021 Broken Access Control"
+    owasp:                   # dual-listed while the ecosystem straddles both editions
+      - "A01:2021 Broken Access Control"
+      - "A01:2025 Broken Access Control"
     cwe: "CWE-269: ..."
     asvs: "V1.2.2"           # ties the finding to an auditable requirement
     confidence: HIGH

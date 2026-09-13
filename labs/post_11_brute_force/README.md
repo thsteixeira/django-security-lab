@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A07:2021 — Identification and Authentication Failures |
+| **OWASP** | A07:2025 — Authentication Failures |
 | **CWE** | CWE-307 — Improper Restriction of Excessive Authentication Attempts |
 | **ASVS** | V2.2.1 — anti-automation controls against credential testing |
 | **Detection** | **No scanner tier finds it** — Bandit, Semgrep community, *and* the audit tier all miss. The gate is `tests.py` + a dynamic `curl` probe (see Scanning it) |

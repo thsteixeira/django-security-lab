@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A01:2021 — Broken Access Control |
+| **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-639 — Authorization Bypass Through User-Controlled Key |
 | **ASVS** | V4.2.1 — protect data/APIs against IDOR |
 | **Detection** | SAST — the standard tools **miss** this class; a **custom rule** ([`rules/idor.yaml`](../../rules/idor.yaml)) catches it, asserted in CI (see Scanning it) |

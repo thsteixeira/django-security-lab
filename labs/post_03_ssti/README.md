@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A03:2021 — Injection |
+| **OWASP** | A05:2025 — Injection |
 | **CWE** | CWE-1336 — Improper Neutralization of Special Elements Used in a Template Engine |
 | **ASVS** | V5.2.5 — protect against template injection |
 | **Detection** | SAST — the standard tools **miss** this class; a **custom rule** ([`rules/ssti.yaml`](../../rules/ssti.yaml)) catches it, asserted in CI (see Scanning it) |

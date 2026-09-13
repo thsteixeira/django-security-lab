@@ -9,7 +9,11 @@ rules:
       off Django's autoescaping - a stored/reflected XSS sink. Sanitise first:
       mark_safe(nh3.clean(value)).
     metadata:
-      owasp: "A03:2021 - Injection"
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A03:2021 - Injection"
+        - "A05:2025 - Injection"
       cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
       asvs: "V5.3.3"
       confidence: MEDIUM

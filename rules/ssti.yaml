@@ -12,7 +12,11 @@ rules:
       data to a fixed template instead:
       Template("{{ value }}").render(Context({"value": user_input})).
     metadata:
-      owasp: "A03:2021 - Injection"
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A03:2021 - Injection"
+        - "A05:2025 - Injection"
       cwe: "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine ('Server-Side Template Injection')"
       asvs: "V5.2.5"
       confidence: MEDIUM

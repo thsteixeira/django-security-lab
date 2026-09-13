@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A01:2021 — Broken Access Control (impact) · mechanism is CWE-915 mass assignment (A08) |
+| **OWASP** | A01:2025 — Broken Access Control (impact) · mechanism is CWE-915 mass assignment (A08 Software or Data Integrity Failures) |
 | **CWE** | CWE-915 — Improperly Controlled Modification of Dynamically-Determined Object Attributes |
 | **ASVS** | V5.1.2 — protect against mass parameter assignment |
 | **Detection** | SAST — the standard tools **miss** `fields='__all__'`; a **custom rule** ([`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml)) catches it, asserted in CI (see Scanning it) |

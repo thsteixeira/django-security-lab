@@ -13,7 +13,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A03:2021 — Injection |
+| **OWASP** | A05:2025 — Injection |
 | **CWE** | CWE-78 — Improper Neutralization of Special Elements used in an OS Command |
 | **ASVS** | V5.3.8 — prevent OS command injection; use parameterized OS calls |
 | **Detection** | SAST — Bandit `B602` (shell=True) **and** Semgrep community both fire on the vulnerable view and are silent on the secure one, asserted in CI (no custom rule needed; cf. Lab 01 / SQLi) |

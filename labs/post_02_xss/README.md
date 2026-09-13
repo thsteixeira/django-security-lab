@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A03:2021 — Injection |
+| **OWASP** | A05:2025 — Injection |
 | **CWE** | CWE-79 — Improper Neutralization of Input During Web Page Generation |
 | **ASVS** | V5.3.3 — context-aware output encoding / sanitisation |
 | **Detection** | SAST — standard tools can't split bug from fix; a **custom rule** ([`rules/xss.yaml`](../../rules/xss.yaml)) does, asserted in CI (see Scanning it) |

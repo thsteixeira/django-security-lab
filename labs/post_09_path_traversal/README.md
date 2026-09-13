@@ -6,7 +6,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A01:2021 — Broken Access Control |
+| **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-22 — Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') |
 | **ASVS** | V12.3.1 — file paths from user input are validated to stay within the intended directory |
 | **Detection** | SAST — the standard tools **miss** it; the Django community rule is registry-only *and* misses the realistic multi-variable form, so a **custom rule** ([`rules/path_traversal.yaml`](../../rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |

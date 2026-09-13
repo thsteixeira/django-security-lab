@@ -11,7 +11,11 @@ rules:
       and entities), or build a hardened lxml parser (resolve_entities=False,
       no_network=True, load_dtd=False).
     metadata:
-      owasp: "A05:2021 - Security Misconfiguration"
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A05:2021 - Security Misconfiguration"
+        - "A02:2025 - Security Misconfiguration"
       cwe:
         - "CWE-611: Improper Restriction of XML External Entity Reference"
         - "CWE-776: Improper Restriction of Recursive Entity References ('XML Entity Expansion')"

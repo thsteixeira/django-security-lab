@@ -5,7 +5,7 @@ Companion lab for the blog post
 
 | | |
 |---|---|
-| **OWASP** | A07:2021 — Identification & Authentication Failures |
+| **OWASP** | A07:2025 — Authentication Failures |
 | **CWE** | CWE-384 — Session Fixation · CWE-614 — Sensitive Cookie Without 'Secure' Flag (the cookie half) |
 | **ASVS** | V3.2.1 — a new session token is generated on authentication |
 | **Detection** | No SAST rule possible (the flaw is the *absence* of `cycle_key()` — nothing to match). Django's own **`manage.py check --deploy`** flags the cookie half (`security.W012`); the rotation half is proven by `tests.py` + the `curl` probe below |
