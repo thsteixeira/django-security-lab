@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "labs.post_11_brute_force",
     "labs.post_12_session_fixation",
     "labs.post_13_weak_passwords",
+    "labs.post_14_password_reset",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -66,6 +67,13 @@ MIDDLEWARE = [
 # than setting it here — a global setting would have silently applied this lab's
 # 15-character floor to every other lab. See CONTRIBUTING.md, "Settings are
 # global; lab behaviour should not be."
+
+# Lab 14 sends a password-reset email, and the link inside it *is* the thing under
+# study — so mail has to go somewhere a reader can read. The console backend prints
+# it to the `docker compose up` log; nothing leaves the container. Django's test
+# runner overrides this with the locmem backend automatically, which is how
+# tests.py reads the same link out of `django.core.mail.outbox`.
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # @login_required redirects here (POST-only endpoint; a GET just 405s, which is a
 # fine "you must log in" signal for a lab).

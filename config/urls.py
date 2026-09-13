@@ -39,6 +39,10 @@ def index(request):
         "<li>/passwords/vulnerable/register/ and /passwords/secure/register/ "
         "(POST username=mallory&amp;password=Password123!), then guess carol's "
         "password once at /accounts/login/ and read /passwords/secret/</li>"
+        "<li>/password-reset/vulnerable/request/ and /password-reset/secure/request/ "
+        "(POST email=dave@example.test), then replay the 400-day-old leaked token at "
+        "/password-reset/vulnerable/confirm/&lt;uidb64&gt;/&lt;token&gt;/ &mdash; read the "
+        "seed log for the link &mdash; and open /password-reset/vault/</li>"
         "</ul>"
     )
 
@@ -60,4 +64,5 @@ urlpatterns = [
     path("brute-force/", include("labs.post_11_brute_force.urls")),
     path("session/", include("labs.post_12_session_fixation.urls")),
     path("passwords/", include("labs.post_13_weak_passwords.urls")),
+    path("password-reset/", include("labs.post_14_password_reset.urls")),
 ]

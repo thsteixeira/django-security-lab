@@ -1,0 +1,80 @@
+# ============================================================================
+# SAST evidence - the custom rule vs Lab 14
+#
+# Commands:
+#   semgrep scan --config rules/password_reset.yaml #       labs/post_14_password_reset/views_vulnerable.py #       labs/post_14_password_reset/views_secure.py
+#   semgrep --test --config rules/password_reset.yaml rules/password_reset.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-09-13
+# Result: the scan-assert the standard tiers could not give. The rule fires on
+#         views_vulnerable.py and is SILENT on views_secure.py - 1 finding
+#         across the pair. The stem-paired fixture passes 1/1, covering the
+#         guard-clause shape, a class-based view, the authenticated
+#         change-your-own-password view that must stay quiet, and one accepted
+#         false negative (token read from the POST body) marked todoruleid.
+#         Both commands run in CI. See scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config rules/password_reset.yaml labs/post_14_password_reset/views_vulnerable.py labs/post_14_password_reset/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 2 files tracked by git with 1 Code rule:
+  Scanning 2 files.
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                                   
+    labs/post_14_password_reset/views_vulnerable.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password-reset.reset-token-never-verified
+          ❰❰ Blocking ❱❱
+          This view takes a reset token from the URL and calls set_password(), but never calls check_token().
+          A token that is only looked up - not verified - carries no expiry and no binding to the account's  
+          current state, so a reset link that leaked (proxy log, browser history, Referer, mailbox backup)   
+          stays a working credential indefinitely, and a link already spent can be replayed. Verify with     
+          django.contrib.auth.tokens.default_token_generator.check_token(user, token) before the write: its  
+          hash input includes the user's password hash, last_login and a timestamp, so the token expires     
+          against PASSWORD_RESET_TIMEOUT and self-invalidates the moment the password changes. Better still, 
+          use django.contrib.auth.views.PasswordResetConfirmView, which does this for you.                   
+                                                                                                             
+           76┆ @csrf_exempt
+           77┆ @require_POST
+           78┆ def confirm(request, uidb64, token):
+           79┆     user = user_from_uidb64(uidb64)
+           80┆     row = ResetToken.objects.filter(token=token).first()
+           81┆     if user is None or row is None or row.user_id != user.pk:
+           82┆         return HttpResponse("invalid reset link\n", status=400)
+           83┆
+           84┆     # DANGER: nothing between here and the write consults row.created (age) or
+           85┆     # row.used_at (already spent). Both columns exist. Both are populated. No
+             [hid 13 additional lines, adjust with --max-lines-per-finding] 
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 2
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 2 files: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+
+$ semgrep --test --config rules/password_reset.yaml rules/password_reset.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file with 1 Code rule:
+  Scanning 1 file.
+1/1: ✓ All tests passed
+No tests for fixes found.

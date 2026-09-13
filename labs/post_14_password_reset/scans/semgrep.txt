@@ -1,0 +1,385 @@
+# ============================================================================
+# SAST evidence - Semgrep (community AND audit/registry tiers) vs Lab 14
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_14_password_reset/
+#   semgrep scan --config r/python.django --config r/python              labs/post_14_password_reset/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-09-13
+# Result: NEITHER TIER CAN DISTINGUISH THE BUG FROM THE FIX. The curated packs
+#         return 2 findings - the same rule, on the same line, in BOTH views.
+#         The audit tier returns 17, and every finding that lands in a view file
+#         lands on views_vulnerable.py AND views_secure.py in matching pairs:
+#         no-csrf-exempt x2 each, unvalidated-password x1 each,
+#         use-none-for-password-default x1 each, direct-use-of-httpresponse
+#         x1 each. Not one rule separates a reset flow that verifies its token
+#         from one that does not. That is the "can't distinguish" outcome, and
+#         it is why this lab ships a custom rule - see semgrep-custom-rule.txt
+#         and scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_14_password_reset/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 17 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      17          Community     565                                                                
+  python          151      12                                                                                           
+                                                                                                                        
+                   
+                   
+┌─────────────────┐
+│ 2 Code Findings │
+└─────────────────┘
+                                               
+    labs/post_14_password_reset/views_secure.py
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'new_password' is using the empty string as its default and is being used to set the password on
+          'user'. If you meant to set an unusable password, set the default value to 'None' or call       
+          'set_unusable_password()'.                                                                      
+          Details: https://sg.run/zvBW                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ None
+           85┆ new_password = request.POST.get("password", "")
+                                                   
+    labs/post_14_password_reset/views_vulnerable.py
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'new_password' is using the empty string as its default and is being used to set the password on
+          'user'. If you meant to set an unusable password, set the default value to 'None' or call       
+          'set_unusable_password()'.                                                                      
+          Details: https://sg.run/zvBW                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ None
+           88┆ new_password = request.POST.get("password", "")
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 2 (2 blocking)
+ • Rules run: 156
+ • Targets scanned: 17
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 156 rules on 17 files: 2 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+
+
+$ semgrep scan --config r/python.django --config r/python labs/post_14_password_reset/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 17 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      17          Community     378                                                                
+  python          369      12                                                                                           
+                                                                                                                        
+                    
+                    
+┌──────────────────┐
+│ 17 Code Findings │
+└──────────────────┘
+                                       
+    labs/post_14_password_reset/seed.py
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'dave' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(VICTIM_PASSWORD, user=dave):
+              dave.set_password(VICTIM_PASSWORD)                                                                  
+           56┆ dave.set_password(VICTIM_PASSWORD)
+                                        
+    labs/post_14_password_reset/tests.py
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'self.dave' is being set without validating the password. Call                      
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(VICTIM_PASSWORD, user=self.dave):
+              self.dave.set_password(VICTIM_PASSWORD)                                                                  
+           64┆ self.dave.set_password(VICTIM_PASSWORD)
+   
+    ❯❱ python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument
+          ❰❰ Blocking ❱❱
+          Hardcoded password is used as a default argument to 'vuln_confirm'. This could be dangerous if a
+          real password is not supplied.                                                                  
+          Details: https://sg.run/Lw9r                                                                    
+                                                                                                          
+           82┆ def vuln_confirm(self, token, password=ATTACKER_PASSWORD, uidb64=None):
+           83┆     return self.client.post(
+           84┆         f"/password-reset/vulnerable/confirm/{uidb64 or self.uidb64}/{token}/",
+           85┆         {"password": password},
+           86┆     )
+            ⋮┆----------------------------------------
+    ❯❱ python.lang.security.audit.hardcoded-password-default-argument.hardcoded-password-default-argument
+          ❰❰ Blocking ❱❱
+          Hardcoded password is used as a default argument to 'secure_confirm'. This could be dangerous if a
+          real password is not supplied.                                                                    
+          Details: https://sg.run/Lw9r                                                                      
+                                                                                                            
+           88┆ def secure_confirm(self, token, password=ATTACKER_PASSWORD, uidb64=None):
+           89┆     return self.client.post(
+           90┆         f"/password-reset/secure/confirm/{uidb64 or self.uidb64}/{token}/",
+           91┆         {"password": password},
+           92┆     )
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'self.dave' is being set without validating the password. Call                      
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password("changed it in settings instead",
+              user=self.dave): self.dave.set_password("changed it in settings instead")                                
+          219┆ self.dave.set_password("changed it in settings instead")
+                                               
+    labs/post_14_password_reset/views_secure.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           47┆ @csrf_exempt
+           48┆ @require_POST
+           49┆ def request_reset(request):
+           50┆     email = request.POST.get("email", "")
+           51┆     if not email:
+           52┆         return HttpResponse("email required\n", status=400)
+           53┆
+           54┆     user = User.objects.filter(email__iexact=email).first()
+           55┆     if user is not None:
+           56┆         path = reverse(
+             [hid 18 additional lines, adjust with --max-lines-per-finding] 
+           77┆ @csrf_exempt
+           78┆ @require_POST
+           79┆ def confirm(request, uidb64, token):
+           80┆     user = user_from_uidb64(uidb64)
+           81┆     # One call covers signature, age, prior use, and an intervening login.
+           82┆     if user is None or not default_token_generator.check_token(user, token):
+           83┆         return HttpResponse("invalid or expired reset link\n", status=400)
+           84┆
+           85┆     new_password = request.POST.get("password", "")
+           86┆     if not new_password:
+             [hid 8 additional lines, adjust with --max-lines-per-finding] 
+   
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'new_password' is using the empty string as its default and is being used to set the password on
+          'user'. If you meant to set an unusable password, set the default value to 'None' or call       
+          'set_unusable_password()'.                                                                      
+          Details: https://sg.run/zvBW                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ None
+           85┆ new_password = request.POST.get("password", "")
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'user' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(new_password, user=user):
+              user.set_password(new_password)                                                                  
+           89┆ user.set_password(new_password)
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           94┆ return HttpResponse(f"password updated for {user.username}\n")
+                                              
+    labs/post_14_password_reset/views_vault.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           21┆ return HttpResponse(
+           22┆     f"<h1>Vault</h1><p>{escape(request.user.username)} has no items.</p>"
+           23┆ )
+            ⋮┆----------------------------------------
+           27┆ return HttpResponse(f"<h1>Vault</h1>{body}")
+                                                   
+    labs/post_14_password_reset/views_vulnerable.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           43┆ @csrf_exempt
+           44┆ @require_POST
+           45┆ def request_reset(request):
+           46┆     email = request.POST.get("email", "")
+           47┆     if not email:
+           48┆         return HttpResponse("email required\n", status=400)
+           49┆
+           50┆     try:
+           51┆         user = User.objects.get(email__iexact=email)
+           52┆     except User.DoesNotExist:
+             [hid 21 additional lines, adjust with --max-lines-per-finding] 
+           76┆ @csrf_exempt
+           77┆ @require_POST
+           78┆ def confirm(request, uidb64, token):
+           79┆     user = user_from_uidb64(uidb64)
+           80┆     row = ResetToken.objects.filter(token=token).first()
+           81┆     if user is None or row is None or row.user_id != user.pk:
+           82┆         return HttpResponse("invalid reset link\n", status=400)
+           83┆
+           84┆     # DANGER: nothing between here and the write consults row.created (age) or
+           85┆     # row.used_at (already spent). Both columns exist. Both are populated. No
+             [hid 13 additional lines, adjust with --max-lines-per-finding] 
+   
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'new_password' is using the empty string as its default and is being used to set the password on
+          'user'. If you meant to set an unusable password, set the default value to 'None' or call       
+          'set_unusable_password()'.                                                                      
+          Details: https://sg.run/zvBW                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ None
+           88┆ new_password = request.POST.get("password", "")
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'user' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(new_password, user=user):
+              user.set_password(new_password)                                                                  
+           92┆ user.set_password(new_password)
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           98┆ return HttpResponse(f"password updated for {user.username}\n")
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 17 (17 blocking)
+ • Rules run: 372
+ • Targets scanned: 17
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 372 rules on 17 files: 17 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+
+
+# ----------------------------------------------------------------------------
+# The same five configs against the RULE FIXTURE (a committed repo file), which
+# holds six set_password() call sites: two broken reset views, three correct
+# views, and one accepted false negative. If any tier could tell them apart,
+# this is where it would show.
+#
+# It fires on ALL SIX - including change_own_password(), an authenticated user
+# changing their own password with no token anywhere, which is simply correct
+# code. Six call sites, six findings, one rule, zero discrimination.
+# ----------------------------------------------------------------------------
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python rules/password_reset.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 791 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  python          368       1          Community     791                                                                
+  <multilang>       8       1                                                                                           
+                                                                                                                        
+                   
+                   
+┌─────────────────┐
+│ 6 Code Findings │
+└─────────────────┘
+                           
+    rules/password_reset.py
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'user' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["password"],
+              user=user): user.set_password(request.POST["password"])                                          
+           34┆ user.set_password(request.POST["password"])
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["password"],
+              user=user): user.set_password(request.POST["password"])                                          
+           45┆ user.set_password(request.POST["password"])
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["password"],
+              user=user): user.set_password(request.POST["password"])                                          
+           63┆ user.set_password(request.POST["password"])
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["password"],
+              user=user): user.set_password(request.POST["password"])                                          
+           74┆ user.set_password(request.POST["password"])
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["new_password"],
+              user=user): user.set_password(request.POST["new_password"])                                          
+           88┆ user.set_password(request.POST["new_password"])
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(request.POST["password"],
+              user=user): user.set_password(request.POST["password"])                                          
+          108┆ user.set_password(request.POST["password"])
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 6 (6 blocking)
+ • Rules run: 376
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 376 rules on 1 file: 6 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading

@@ -1,0 +1,95 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 14
+#
+# Command:
+#   bandit -r labs/post_14_password_reset/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-09-13
+# Result: a COMPLETE MISS on the vulnerability. Not one finding lands in a view
+#         file. The defect is an unverified token reaching set_password() - an
+#         ABSENT check_token() call, which has no AST node for Bandit to match.
+#         Every finding below is fixture data in seed.py and tests.py. Note the
+#         SECOND one (seed.py:43): Bandit flags the leaked reset token as a
+#         "hardcoded password", which is the closest any standard tool comes to
+#         the bug and is still about the wrong property of it. See scans/README.md.
+# ============================================================================
+
+$ bandit -r labs/post_14_password_reset/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-09-13 21:26:00.140236+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'orbit lantern drawer ninety'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_14_password_reset/seed.py:40:18
+39	# Strong on purpose: guessing is not the intended path into this account.
+40	VICTIM_PASSWORD = "orbit lantern drawer ninety"
+41	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: '6f1c1e2a-9b7d-4a3f-8c21-0d5e7a9b4c33'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_14_password_reset/seed.py:43:15
+42	# A reset link that leaked. Fixed so the README can quote the full URL.
+43	LEAKED_TOKEN = "6f1c1e2a-9b7d-4a3f-8c21-0d5e7a9b4c33"
+44	LEAKED_TOKEN_AGE = timedelta(days=400)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'the attacker picks this one'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_14_password_reset/tests.py:45:20
+44	
+45	ATTACKER_PASSWORD = "the attacker picks this one"
+46	
+
+--------------------------------------------------
+>> Issue: [B106:hardcoded_password_funcarg] Possible hardcoded password: 'unimportant here'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b106_hardcoded_password_funcarg.html
+   Location: labs/post_14_password_reset/tests.py:172:18
+171	        mallory = User.objects.create_user(
+172	            username="mallory", email="mallory@example.test", password="unimportant here"
+173	        )
+174	        resp = self.vuln_confirm(
+175	            LEAKED_TOKEN, uidb64=urlsafe_base64_encode(force_bytes(mallory.pk))
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'dave picks a fresh pass phrase'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_14_password_reset/tests.py:306:23
+305	        path = link[len(RESET_BASE_URL) :]
+306	        new_password = "dave picks a fresh pass phrase"
+307	        resp = self.client.post(path, {"password": new_password})
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 595
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 5
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 5
+		High: 0
+Files skipped (0):
