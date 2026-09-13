@@ -11,3 +11,6 @@ staticfiles/
 .DS_Store
 jar*.txt
 cookies.txt
+
+# Local developer tooling, not part of the published lab
+scripts/*.ps1

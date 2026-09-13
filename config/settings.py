@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "labs.post_10_mass_assignment",
     "labs.post_11_brute_force",
     "labs.post_12_session_fixation",
+    "labs.post_13_weak_passwords",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -54,6 +55,17 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
 ]
+
+# NOTE: there is deliberately NO AUTH_PASSWORD_VALIDATORS here, so this project
+# runs on Django's genuine default — `AUTH_PASSWORD_VALIDATORS = []` in
+# django/conf/global_settings.py. The four-validator block everyone recognises
+# comes from the `startproject` TEMPLATE, not from the framework.
+#
+# Lab 13 needs a real policy, but it keeps it in labs/post_13_weak_passwords/
+# policy.py and passes it to validate_password(password_validators=...) rather
+# than setting it here — a global setting would have silently applied this lab's
+# 15-character floor to every other lab. See CONTRIBUTING.md, "Settings are
+# global; lab behaviour should not be."
 
 # @login_required redirects here (POST-only endpoint; a GET just 405s, which is a
 # fine "you must log in" signal for a lab).

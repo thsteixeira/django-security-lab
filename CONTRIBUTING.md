@@ -85,6 +85,27 @@ When a rule is warranted, add the pair `rules/foo.yaml` + `rules/foo.py`:
 - **Pin tool versions** in CI. The community Semgrep packs are fetched from the
   registry (not hermetic); a custom-rule job, if present, stays hermetic
   (`--config ./rules/` only, no `--config auto` / `p/...`).
+- **Settings are global; lab behaviour should not be.** A lab must not add a
+  project-wide Django setting to `config/settings.py` to get its own behaviour.
+  Settings apply to every lab at once, so one lab's tightening silently becomes
+  every other lab's constraint — including labs that do not exist yet, whose
+  authors will debug it as a mystery. Prefer, in order: (1) pass the behaviour
+  explicitly at the call site (e.g. `validate_password(...,
+  password_validators=...)` — most Django subsystems take an override argument
+  for exactly this); (2) a per-view decorator (`@csrf_protect` in Lab 08);
+  (3) `@override_settings` in `tests.py`, if only the tests need it. Add a real
+  global setting **only** when the lesson *is* the global setting, and then say
+  so in the lab README and in `SECURITY_LAB_MODULE_PLAN.md` so the next author
+  inherits the constraint knowingly, not by surprise.
+
+  *Worked example — Lab 13.* It first set `AUTH_PASSWORD_VALIDATORS` globally
+  with a 15-character floor. That is a perfectly reasonable policy and it
+  quietly invalidated the shared B7 cast password `labpass` (7 characters) and
+  Lab 11's `summer2024` (10) for every future form-based lab. The policy moved
+  to `labs/post_13_weak_passwords/policy.py`, passed explicitly via
+  `password_validators=`. The project now carries no `AUTH_PASSWORD_VALIDATORS`
+  at all — which is also more honest, since Django's real default is `[]`.
+
 - **Postgres via `docker compose` is the one run path.** Keep `tests.py` green
   there, write CTF payloads for Postgres semantics, and capture `scans/` evidence
   against that same stack — the committed output has to match what a reader

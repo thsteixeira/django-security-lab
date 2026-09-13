@@ -1,0 +1,80 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 13
+#
+# Command:
+#   bandit -r labs/post_13_weak_passwords/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-09-13
+# Result: a COMPLETE MISS on the vulnerability. Bandit has no model of
+#         Django password validation, so the unvalidated set_password() in
+#         views_vulnerable.py draws nothing. Every finding below is on the
+#         lab scaffolding or on the SECURE validator. See scans/README.md.
+# ============================================================================
+
+$ bandit -r labs/post_13_weak_passwords/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-09-13 18:04:38.152169+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Password123!'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_13_weak_passwords/seed.py:30:18
+29	# NumericPassword — Django's four defaults — and appears 295,389 times in HIBP.
+30	VICTIM_PASSWORD = "Password123!"
+31	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'flat marble kettle horizon'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_13_weak_passwords/seed.py:34:18
+33	# in neither blocklist, not numeric, not similar to any user attribute.
+34	STRONG_PASSWORD = "flat marble kettle horizon"
+35	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'not-the-password'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_13_weak_passwords/tests.py:123:53
+122	        resp = attacker.post(
+123	            "/accounts/login/", {"username": VICTIM, "password": "not-the-password"}
+124	        )
+
+--------------------------------------------------
+>> Issue: [B310:blacklist] Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.
+   Severity: Medium   Confidence: High
+   CWE: CWE-22 (https://cwe.mitre.org/data/definitions/22.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b310-urllib-urlopen
+   Location: labs/post_13_weak_passwords/validators.py:92:13
+91	        )
+92	        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+93	            return response.read().decode("utf-8")
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 574
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 3
+		Medium: 1
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 3
+		High: 1
+Files skipped (0):

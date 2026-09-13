@@ -36,6 +36,9 @@ def index(request):
         "<li>/session/whoami/ (grab a sessionid), then POST bob's login to "
         "/session/vulnerable/login/ carrying it, then /session/secret/ &mdash; "
         "session fixation vs. /session/secure/login/ which rotates</li>"
+        "<li>/passwords/vulnerable/register/ and /passwords/secure/register/ "
+        "(POST username=mallory&amp;password=Password123!), then guess carol's "
+        "password once at /accounts/login/ and read /passwords/secret/</li>"
         "</ul>"
     )
 
@@ -56,4 +59,5 @@ urlpatterns = [
     path("mass-assignment/", include("labs.post_10_mass_assignment.urls")),
     path("brute-force/", include("labs.post_11_brute_force.urls")),
     path("session/", include("labs.post_12_session_fixation.urls")),
+    path("passwords/", include("labs.post_13_weak_passwords.urls")),
 ]
