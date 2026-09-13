@@ -14,4 +14,13 @@ defusedxml==0.7.1
 # (mass assignment). The vulnerable view's ModelSerializer(fields="__all__") is
 # the over-posting sink; the secure view uses an explicit fields list +
 # read_only_fields. Reused by the later API/JWT/OAuth2 labs (Wave 5).
-djangorestframework==3.16.1
+#
+# Bumped 3.16.1 -> 3.17.2 (Sep 13, 2026) because the SCA gate went red on two
+# advisories against every version <= 3.17.1: PYSEC-2026-3827 / CVE-2026-73228
+# (request.data bypasses DATA_UPLOAD_MAX_MEMORY_SIZE via Django's streaming
+# interface, a resource-exhaustion risk) and PYSEC-2026-3828 / CVE-2026-73229
+# (AdminRenderer re-invokes the GET handler when rendering a 400 for an invalid
+# write, disclosing data GET permissions would have refused). Neither reaches
+# Lab 10 — it uses the default renderers and its sink is serializer field
+# exposure, not upload size or AdminRenderer — but the gate is the gate.
+djangorestframework==3.17.2
