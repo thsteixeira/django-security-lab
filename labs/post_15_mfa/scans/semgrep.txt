@@ -1,0 +1,182 @@
+# ============================================================================
+# SAST evidence - Semgrep (community AND audit/registry tiers) vs Lab 15
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_15_mfa/
+#   semgrep scan --config r/python.django --config r/python              labs/post_15_mfa/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-09-13
+# Result: the curated packs are COMPLETELY SILENT - 0 findings from 156 rules.
+#         The audit tier returns 9, and not one of them is about authorization:
+#         the two dashboards draw direct-use-of-httpresponse x2 EACH (the labs'
+#         plain-text convention), which is a perfectly symmetric pair carrying no
+#         signal about the gate. Grepping the full JSON for "otp", "is_verified"
+#         or "login_required" returns ZERO matches across all 372 rules.
+#
+#         The one auth-adjacent rule that fires, is-function-without-parentheses,
+#         fires twice and is a FALSE POSITIVE both times, on correct modern
+#         Django: it flags
+#         `if not request.user.is_authenticated:`, which has been a property
+#         rather than a method since Django 1.10.
+#
+#         No custom rule is possible here (see scans/README.md): which views
+#         require a second factor is a policy decision, not a syntactic property.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_15_mfa/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 15 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      15          Community     565                                                                
+  python          151      11                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 15
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 156 rules on 15 files: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+
+$ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 15 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      15          Community     378                                                                
+  python          369      11                                                                                           
+                                                                                                                        
+                   
+                   
+┌─────────────────┐
+│ 9 Code Findings │
+└─────────────────┘
+                            
+    labs\post_15_mfa\seed.py
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'erin' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(VICTIM_PASSWORD, user=erin):
+              erin.set_password(VICTIM_PASSWORD)                                                                  
+           45┆ erin.set_password(VICTIM_PASSWORD)
+                             
+    labs\post_15_mfa\tests.py
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'self.erin' is being set without validating the password. Call                      
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(VICTIM_PASSWORD, user=self.erin):
+              self.erin.set_password(VICTIM_PASSWORD)                                                                  
+           47┆ self.erin.set_password(VICTIM_PASSWORD)
+   
+    ❯❱ python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+          ❰❰ Blocking ❱❱
+          Is "is_authenticated" a function or an attribute? If it is a function, you may have meant          
+          resp.wsgi_request.user.is_authenticated() because resp.wsgi_request.user.is_authenticated is always
+          true.                                                                                              
+          Details: https://sg.run/oYR7                                                                       
+                                                                                                             
+           98┆ self.assertTrue(resp.wsgi_request.user.is_authenticated)
+                                    
+    labs\post_15_mfa\views_secure.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           31┆ return HttpResponse(
+           32┆     f"<h1>Dashboard</h1><p>{escape(request.user.username)} has no records.</p>"
+           33┆ )
+            ⋮┆----------------------------------------
+           37┆ return HttpResponse(f"<h1>Dashboard</h1>{body}")
+                                    
+    labs\post_15_mfa\views_verify.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           37┆ @csrf_exempt
+           38┆ @require_POST
+           39┆ def verify(request):
+           40┆     if not request.user.is_authenticated:
+           41┆         return HttpResponse("log in first\n", status=401)
+           42┆
+           43┆     device = TOTPDevice.objects.filter(user=request.user, confirmed=True).first()
+           44┆     if device is None:
+           45┆         return HttpResponse("no confirmed device\n", status=400)
+           46┆
+             [hid 9 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+          ❰❰ Blocking ❱❱
+          Is "is_authenticated" a function or an attribute? If it is a function, you may have meant
+          request.user.is_authenticated() because request.user.is_authenticated is always true.    
+          Details: https://sg.run/oYR7                                                             
+                                                                                                   
+           40┆ if not request.user.is_authenticated:
+                                        
+    labs\post_15_mfa\views_vulnerable.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           38┆ return HttpResponse(
+           39┆     f"<h1>Dashboard</h1><p>{escape(request.user.username)} has no records.</p>"
+           40┆ )
+            ⋮┆----------------------------------------
+           44┆ return HttpResponse(f"<h1>Dashboard</h1>{body}")
+
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 9 (9 blocking)
+ • Rules run: 372
+ • Targets scanned: 15
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 372 rules on 15 files: 9 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading

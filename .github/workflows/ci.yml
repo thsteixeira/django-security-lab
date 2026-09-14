@@ -58,6 +58,11 @@ jobs:
       # ship a custom rule and are asserted — and documented — in the custom-rules
       # job below (02, 03, 05, 06, 07, 09, 10, 14). Lab 11 (brute force) has no static signal in
       # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
+      # Lab 15 (MFA) likewise carries no SAST assert, for a different reason: the
+      # defect is @login_required where @otp_required belonged, and no pattern can
+      # know which views require a second factor. Curated packs are 0/156 and the
+      # audit tier scores both dashboards identically; the gate is tests.py, whose
+      # sweep drives a password-only session at every protected URL.
 
       # Lab 01 (SQL injection) — the standard tools catch it cleanly: both fire on
       # the vulnerable view and stay silent on the secure one.

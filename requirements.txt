@@ -24,3 +24,8 @@ defusedxml==0.7.1
 # Lab 10 — it uses the default renderers and its sink is serializer field
 # exposure, not upload size or AdminRenderer — but the gate is the gate.
 djangorestframework==3.17.2
+# B8 — the MFA stack, introduced with Lab 15. django-otp supplies the device
+# models, the TOTP plugin, OTPMiddleware and the otp_required decorator. Its only
+# hard dependency is Django itself (the qrcode/segno extras are optional and not
+# installed — the labs are command-line first). pip-audit-clean at this pin.
+django-otp==1.7.3

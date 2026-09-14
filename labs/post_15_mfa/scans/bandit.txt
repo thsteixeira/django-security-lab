@@ -1,0 +1,55 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 15
+#
+# Command:
+#   bandit -r labs/post_15_mfa/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-09-13
+# Result: a COMPLETE MISS, and the smallest capture in this repo - ONE finding,
+#         on a seeded fixture password. Nothing in any view. The defect is an
+#         ABSENT decorator, which has no AST node.
+#
+#         Worth more than the miss: Bandit does NOT flag TOTP_KEY in seed.py,
+#         which is the hardcoded SECOND FACTOR and a far more dangerous constant
+#         than the password it does flag. B105 keys on the variable NAME looking
+#         password-ish; "TOTP_KEY" does not, so the actual MFA secret sails past
+#         while the fixture password is reported. See scans/README.md.
+# ============================================================================
+
+$ bandit -r labs/post_15_mfa/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-09-14 01:15:59.888372+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'copper meadow transit fifty'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_15_mfa/seed.py:33:18
+32	# that. Assume the attacker already has it.
+33	VICTIM_PASSWORD = "copper meadow transit fifty"
+34	
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 352
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 0
+Files skipped (0):

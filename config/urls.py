@@ -43,6 +43,10 @@ def index(request):
         "(POST email=dave@example.test), then replay the 400-day-old leaked token at "
         "/password-reset/vulnerable/confirm/&lt;uidb64&gt;/&lt;token&gt;/ &mdash; read the "
         "seed log for the link &mdash; and open /password-reset/vault/</li>"
+        "<li>/mfa/vulnerable/dashboard/ and /mfa/secure/dashboard/ &mdash; log in as "
+        "erin with her PASSWORD ONLY at /accounts/login/, then try both; the "
+        "vulnerable one serves the flag, the secure one wants the second factor. "
+        "POST a TOTP code to /mfa/{vulnerable,secure}/verify/</li>"
         "</ul>"
     )
 
@@ -65,4 +69,5 @@ urlpatterns = [
     path("session/", include("labs.post_12_session_fixation.urls")),
     path("passwords/", include("labs.post_13_weak_passwords.urls")),
     path("password-reset/", include("labs.post_14_password_reset.urls")),
+    path("mfa/", include("labs.post_15_mfa.urls")),
 ]

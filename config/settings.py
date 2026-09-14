@@ -28,6 +28,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",   # B1 — session-cookie auth (Series II/III labs)
     "django.contrib.staticfiles",
     "rest_framework",            # B4 — DRF stack, introduced with Lab 10 (mass assignment)
+    # B8 — the MFA stack, introduced with Lab 15. django_otp adds the device
+    # models; otp_totp is the TOTP plugin. Both are inert for every other lab:
+    # no device rows exist, so nothing changes for them.
+    "django_otp",
+    "django_otp.plugins.otp_totp",
     "labs",
     "labs.post_01_sql_injection",
     "labs.post_02_xss",
@@ -43,6 +48,7 @@ INSTALLED_APPS = [
     "labs.post_12_session_fixation",
     "labs.post_13_weak_passwords",
     "labs.post_14_password_reset",
+    "labs.post_15_mfa",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -55,6 +61,11 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # B8 — OTPMiddleware must follow AuthenticationMiddleware. It sets
+    # request.user.otp_device (None unless a verified device is on the session)
+    # and is what makes request.user.is_verified() answerable at all. Inert for
+    # the other labs: with no device on the session it just records None.
+    "django_otp.middleware.OTPMiddleware",
 ]
 
 # NOTE: there is deliberately NO AUTH_PASSWORD_VALIDATORS here, so this project
