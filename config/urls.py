@@ -46,7 +46,8 @@ def index(request):
         "<li>/mfa/vulnerable/dashboard/ and /mfa/secure/dashboard/ &mdash; log in as "
         "erin with her PASSWORD ONLY at /accounts/login/, then try both; the "
         "vulnerable one serves the flag, the secure one wants the second factor. "
-        "POST a TOTP code to /mfa/{vulnerable,secure}/verify/</li>"
+        "POST a TOTP code to /mfa/verify/ &mdash; one endpoint, correct in both "
+        "worlds</li>"
         "</ul>"
     )
 

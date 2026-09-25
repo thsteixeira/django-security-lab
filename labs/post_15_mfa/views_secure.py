@@ -9,8 +9,12 @@ actually checked out.
 So the question at the door changes from "did you authenticate" to "did you
 present the second factor on this session", and the password-only side door stops
 being a way in. Every executable line below the decorator is identical to the
-vulnerable twin — only its ``# DANGER:`` comment differs — so diff the two files
-and the entire vulnerability is one line.
+vulnerable twin — only its ``# DANGER:`` comment differs — so the whole
+vulnerability is the decorator on the line above it.
+
+A literal ``diff`` of the two files is not one line: the docstrings differ
+wholesale and so does the one import, which comes to 43 changed lines. Diff the
+function bodies and nothing that runs differs at all.
 
 Worth saying plainly: no new library, no new middleware, no re-implementation of
 anything. ``django-otp`` was already installed and already correct. This class is
