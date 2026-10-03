@@ -71,8 +71,8 @@ new_password = request.POST.get("password", "")
 
 The rule's point is that `""` as a `.get()` default can reach `set_password()` and
 silently set an empty password. It is a false positive in both views — each guards
-with `if not new_password: return 400` two lines later, which Semgrep does not
-see — but even taken at face value, **acting on it changes nothing about whether
+with `if not new_password: return 400` on the very next line, which the rule has
+no clause to see — but even taken at face value, **acting on it changes nothing about whether
 the token was verified**. A rule that fires identically on the bug and the fix
 cannot be used as a scan-assert.
 
