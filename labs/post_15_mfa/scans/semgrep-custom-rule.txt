@@ -16,10 +16,13 @@
 #         shared password-only side door at labs/_common/views.py:28.
 #         The stem-paired fixture passes 2/2, covering the decorator called
 #         with arguments, both stacking orders of a correct view,
+#         @otp_required(if_configured=True) (optional MFA - must fire),
 #         get_object_or_404(), a @login_required view on a model the policy does
 #         not name (must stay silent), django_otp.login() (must not be listed),
-#         and four accepted blind spots marked todoruleid: a read in a helper, a
-#         class-based view, a view wrapped in urls.py, and a hand-rolled session.
+#         five accepted blind spots marked todoruleid (a read in a helper, a
+#         class-based view, a view wrapped in urls.py, a model alias, a
+#         hand-rolled session) and one false positive marked todook (a view that
+#         checks is_verified() in its body).
 #         All of it runs in CI. See scans/README.md.
 # ============================================================================
 
@@ -65,12 +68,13 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
     labs\post_15_mfa\views_vulnerable.py
    ❯❯❱ labs.post_15_mfa.rules.thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
           ❰❰ Blocking ❱❱
-          dashboard reads SensitiveRecord, which this project requires a second factor for, behind           
-          @login_required and without @otp_required. @login_required only asks whether the request is        
-          authenticated - a password-only session answers yes. Gate the view with                            
-          django_otp.decorators.otp_required, which also requires request.user.is_verified(): true only after
-          django_otp.login(request, device) recorded a verified device on THIS session.                      
-                                                                                                             
+          dashboard reads SensitiveRecord, which this project requires a second factor for, behind a gate a 
+          password-only session passes: @login_required without @otp_required, or                           
+          @otp_required(if_configured=True), which admits any user with no confirmed device. Gate the view  
+          with django_otp.decorators.otp_required (if_configured left at its default, False), which requires
+          request.user.is_verified(): true only after django_otp.login(request, device) recorded a verified 
+          device on THIS session.                                                                           
+                                                                                                            
            36┆ rows = SensitiveRecord.objects.filter(owner=request.user)
 
 

@@ -3,12 +3,13 @@ rules:
     languages: [python]
     severity: ERROR
     message: >-
-      $FUNC reads $MODEL, which this project requires a second factor for, behind
-      @login_required and without @otp_required. @login_required only asks whether
-      the request is authenticated - a password-only session answers yes. Gate the
-      view with django_otp.decorators.otp_required, which also requires
-      request.user.is_verified(): true only after django_otp.login(request, device)
-      recorded a verified device on THIS session.
+      $FUNC reads $MODEL, which this project requires a second factor for, behind a
+      gate a password-only session passes: @login_required without @otp_required,
+      or @otp_required(if_configured=True), which admits any user with no confirmed
+      device. Gate the view with django_otp.decorators.otp_required (if_configured
+      left at its default, False), which requires request.user.is_verified(): true
+      only after django_otp.login(request, device) recorded a verified device on
+      THIS session.
     metadata:
       # dual-listed: rule metadata is machine-read, and the Semgrep registry
       # carries both editions during the changeover
@@ -38,28 +39,43 @@ rules:
     #     decorated function's own body;
     #   * a class-based view (LoginRequiredMixin) - there is no decorator to key on;
     #   * a view wrapped in urls.py (path("x/", login_required(view))) - the
-    #     function itself carries no decorator.
+    #     function itself carries no decorator;
+    #   * a model imported under an alias (SensitiveRecord as SR) - the regex
+    #     matches the name as written.
+    # And one false positive: a @login_required view that checks
+    # request.user.is_verified() itself is flagged, because the rule keys on the
+    # decorator, not on every way of enforcing it.
     # And the model list is maintained by hand, the same weakness as the URL list
     # in the test sweep: a sensitive model added next quarter is not covered until
     # someone adds it here.
     patterns:
       - pattern-either:
+          # Password-only: @login_required with no @otp_required at all.
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      @django.contrib.auth.decorators.login_required
+                      def $FUNC(...):
+                          ...
+                  - pattern-inside: |
+                      @django.contrib.auth.decorators.login_required(...)
+                      def $FUNC(...):
+                          ...
+              - pattern-not-inside: |
+                  @django_otp.decorators.otp_required
+                  def $FUNC(...):
+                      ...
+              - pattern-not-inside: |
+                  @django_otp.decorators.otp_required(...)
+                  def $FUNC(...):
+                      ...
+          # Optional MFA: if_configured=True lets in "an authenticated user with
+          # no confirmed OTP devices" (django-otp docs), so a user who never
+          # enrolled reaches the model on a password alone.
           - pattern-inside: |
-              @django.contrib.auth.decorators.login_required
+              @django_otp.decorators.otp_required(..., if_configured=True, ...)
               def $FUNC(...):
                   ...
-          - pattern-inside: |
-              @django.contrib.auth.decorators.login_required(...)
-              def $FUNC(...):
-                  ...
-      - pattern-not-inside: |
-          @django_otp.decorators.otp_required
-          def $FUNC(...):
-              ...
-      - pattern-not-inside: |
-          @django_otp.decorators.otp_required(...)
-          def $FUNC(...):
-              ...
       - pattern-either:
           - pattern: $MODEL.objects
           - pattern: django.shortcuts.get_object_or_404($MODEL, ...)

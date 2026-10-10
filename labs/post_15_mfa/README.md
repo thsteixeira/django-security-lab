@@ -182,8 +182,9 @@ that are perfectly correct. Which views sit behind a second factor is a policy
 decision about the data they serve, so the rule is told it: a regex naming the
 models that need a second factor. It flags a `@login_required` view without
 `@otp_required` that reads one — the vulnerable dashboard, not the secure one —
-and a second, INFO-level rule lists every `login()` call, the session-minting side
-doors. Its fixture, [`rules/mfa.py`](rules/mfa.py), records what it cannot see: a
-read in a helper, a class-based view, a view wrapped in `urls.py`, a hand-rolled
-session. Both run in CI; the capture is
+and an `@otp_required(if_configured=True)` view too, since that admits a user with
+no confirmed device. A second, INFO-level rule lists every `login()` call, the
+session-minting side doors. Its fixture, [`rules/mfa.py`](rules/mfa.py), records
+what it cannot see: a read in a helper, a class-based view, a view wrapped in
+`urls.py`, a model alias, a hand-rolled session. Both run in CI; the capture is
 [`scans/semgrep-custom-rule.txt`](scans/semgrep-custom-rule.txt).

@@ -141,9 +141,11 @@ Semgrep cannot guess that policy, but it can enforce one it is given.
 
 - **`sensitive-model-behind-password-only-gate`** (ERROR). The policy is one
   regex: the models this project puts behind MFA (`^(SensitiveRecord)$`). The rule
-  flags a function decorated `@login_required` — bare or called with arguments —
-  and not `@otp_required`, that reads one of them through `.objects`,
-  `get_object_or_404()` or `get_list_or_404()`.
+  flags a function that reads one of them through `.objects`,
+  `get_object_or_404()` or `get_list_or_404()` behind a gate a password-only
+  session passes: `@login_required` — bare or called with arguments — without
+  `@otp_required`, or `@otp_required(if_configured=True)`, which the `django-otp`
+  docs say admits "an authenticated user with no confirmed OTP devices".
 - **`session-minted-without-second-factor`** (INFO). An inventory, not a verdict:
   it lists every `django.contrib.auth.login()` call, the session-minting paths
   the post says to find. `django_otp.login()` is a different function and is not
@@ -166,9 +168,12 @@ password-only endpoint that is this lab's side door. Both commands run in CI.
 The fixture ([`rules/mfa.py`](../rules/mfa.py)) also records what the rules
 cannot see, each marked `todoruleid`: a sensitive read inside a helper the view
 calls, a class-based view (`LoginRequiredMixin` has no decorator to key on), a
-view wrapped in `urls.py`, and a hand-rolled session that writes `_auth_user_id`
-without calling `login()`. And the model list is kept by hand: a sensitive model
-added next quarter is not covered until someone adds it to the regex.
+view wrapped in `urls.py`, a model imported under an alias (`SensitiveRecord as
+SR`), and a hand-rolled session that writes `_auth_user_id` without calling
+`login()`. One false positive is marked `todook`: a `@login_required` view that
+checks `request.user.is_verified()` in its body is flagged, because the rule keys
+on the decorator. And the model list is kept by hand: a sensitive model added next
+quarter is not covered until someone adds it to the regex.
 
 It lives in the lab rather than in the repo-wide `rules/` because it is not a
 general Django rule: the regex names this lab's models. Another project copies it

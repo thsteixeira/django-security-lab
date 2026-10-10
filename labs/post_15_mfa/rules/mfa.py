@@ -6,9 +6,10 @@ checks both rules against it.
 
 It mirrors the lab's two dashboards and adds the shapes that decide whether a
 policy rule like this is usable: the decorator called with arguments, the two
-stacking orders of a correct view, a get_object_or_404() read, and a
-@login_required view that reads a model the policy does NOT name, which must stay
-silent. The functions marked todoruleid document the rule's accepted blind spots.
+stacking orders of a correct view, @otp_required(if_configured=True) (optional
+MFA, which must fire), a get_object_or_404() read, and a @login_required view
+that reads a model the policy does NOT name, which must stay silent. The
+functions marked todoruleid / todook document the rule's accepted blind spots.
 Nothing here is imported at runtime.
 """
 
@@ -23,6 +24,7 @@ from django_otp import login as otp_login
 from django_otp.decorators import otp_required
 
 from ..models import SensitiveRecord
+from ..models import SensitiveRecord as SR
 
 
 # --- sensitive-model-behind-password-only-gate --------------------------------
@@ -49,10 +51,31 @@ def secure_stacked(request):
     return list(SensitiveRecord.objects.filter(owner=request.user))
 
 
-@otp_required(if_configured=True)
+@otp_required(login_url="/mfa/verify/")
 @login_required
 def secure_stacked_reversed_with_args(request):
     # ok: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    return list(SensitiveRecord.objects.filter(owner=request.user))
+
+
+@otp_required(if_configured=False)
+def secure_if_configured_explicitly_false(request):
+    # ok: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    return list(SensitiveRecord.objects.filter(owner=request.user))
+
+
+@otp_required(if_configured=True)
+@login_required
+def vulnerable_optional_mfa(request):
+    """if_configured=True admits a user with no confirmed device: a user who
+    never enrolled reaches the model on a password alone."""
+    # ruleid: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    return list(SensitiveRecord.objects.filter(owner=request.user))
+
+
+@otp_required(if_configured=True)
+def vulnerable_optional_mfa_alone(request):
+    # ruleid: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
     return list(SensitiveRecord.objects.filter(owner=request.user))
 
 
@@ -99,6 +122,22 @@ def undecorated_dashboard(request):
     """Known limit: wrapped in urls.py as login_required(undecorated_dashboard),
     so the function itself carries no decorator."""
     # todoruleid: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    return list(SensitiveRecord.objects.filter(owner=request.user))
+
+
+@login_required
+def vulnerable_via_alias(request):
+    """Known limit: the regex matches the model name as written, not an alias."""
+    # todoruleid: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    return list(SR.objects.filter(owner=request.user))
+
+
+@login_required
+def secure_hand_rolled_check(request):
+    """Known false positive: verification enforced in the body, not by decorator."""
+    if not request.user.is_verified():
+        return None
+    # todook: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
     return list(SensitiveRecord.objects.filter(owner=request.user))
 
 
