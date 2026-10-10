@@ -70,10 +70,23 @@ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
 The two dashboards differ by exactly one decorator, and the tier scores them
 **identically**: two `direct-use-of-httpresponse` each. Nothing separates them.
 
-Without a login, Semgrep's JSON output withholds the matched source
-(`"lines": "requires login"`), so grepping it for `otp`, `is_verified` or
-`login_required` searches rule ids, messages and paths only — and returns **zero
-matches**. No rule in either tier is written about a second factor.
+No rule in either tier is written about a second factor. Grepping the rule
+definitions themselves — all five packs, fetched from the registry on 2026-10-10 —
+for `is_verified` or `login_required` (case-sensitive, as Python identifiers are)
+or `otp` in any case returns **zero matches**:
+
+```bash
+for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
+  curl -sL "https://semgrep.dev/c/$c" | grep -cE 'is_verified|login_required|[Oo][Tt][Pp]'
+done
+# 0 0 0 0 0
+```
+
+Make the whole pattern case-insensitive and `p/owasp-top-ten` returns 4 lines,
+all from one PHP rule's `$IS_VERIFIED` metavariable (`CURLOPT_SSL_VERIFYPEER`),
+which is about TLS, not users. The scan's own JSON cannot answer this question: it
+holds only the rules that fired, and without a login it replaces every matched
+source line with `"requires login"`.
 
 ### The `is_*` rule fires on the fix — and would catch the live trap
 

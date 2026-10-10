@@ -5,9 +5,9 @@
 #   bandit -r labs/post_15_mfa/
 #
 # Tool: Bandit 1.9.4  |  Captured: 2026-10-10
-# Result: a COMPLETE MISS, and the smallest capture in this repo - ONE finding,
-#         on a seeded fixture password. Nothing in any view. The defect is an
-#         ABSENT decorator, which has no AST node.
+# Result: a COMPLETE MISS - ONE finding, on a seeded fixture password.
+#         Nothing in any view. The defect is an ABSENT decorator, which has
+#         no AST node.
 #
 #         Worth more than the miss: Bandit does NOT flag TOTP_KEY in seed.py,
 #         which is the hardcoded SECOND FACTOR and a far more dangerous constant

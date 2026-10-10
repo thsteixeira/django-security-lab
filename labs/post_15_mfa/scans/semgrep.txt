@@ -10,9 +10,9 @@
 #         The audit tier returns 9, and not one of them is about authorization:
 #         the two dashboards draw direct-use-of-httpresponse x2 EACH (the labs'
 #         plain-text convention), which is a perfectly symmetric pair carrying no
-#         signal about the gate. No rule id or message in either tier mentions
-#         "otp", "is_verified" or "login_required" (the JSON output withholds
-#         matched source lines without a login, so that is all a grep can see).
+#         signal about the gate. No rule definition in any of the five packs
+#         mentions "otp", "is_verified" or "login_required" (registry YAML
+#         grepped 2026-10-10; command and caveat in scans/README.md).
 #
 #         is-function-without-parentheses fires twice, and is a FALSE POSITIVE
 #         both times, on correct modern Django: views_verify.py:40

@@ -9,7 +9,7 @@ Companion lab for the blog post
 | **CWE** | CWE-308 — Use of Single-factor Authentication · CWE-287 — Improper Authentication |
 | **ASVS** | 5.0.0 V6.3.4 — no undocumented authentication pathways; controls and authentication strength enforced consistently across them · V6.1.3 — every pathway documented with the strength it must enforce |
 | **NIST** | SP 800-63B-4 §2.2 — AAL2: "proof of possession and control of two distinct authentication factors" |
-| **Detection** | **Nothing finds it, and no custom rule is possible.** Bandit: 1 finding, a fixture password (it misses the hardcoded TOTP seed beside it). Semgrep curated packs: **0/156**. Audit tier: 9/372, the two dashboards scored **identically**, zero matches for `otp`/`is_verified`/`login_required` across all 372 rules. The detection that works is a **test sweep**. See [`scans/`](scans/) |
+| **Detection** | **Nothing finds it, and no custom rule is possible.** Bandit: 1 finding, a fixture password (it misses the hardcoded TOTP seed beside it). Semgrep curated packs: **0/156**. Audit tier: 9/372, the two dashboards scored **identically**, no rule definition in any pack mentions `otp`/`is_verified`/`login_required`. The detection that works is a **test sweep**. See [`scans/`](scans/) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -165,8 +165,8 @@ behaviour instead.
 
 The write-up is in [`scans/README.md`](scans/README.md). The short version: the
 curated packs return **0 findings from 156 rules**, the audit tier returns 9 and
-scores the vulnerable and secure dashboards **identically**, and none of the 372
-rules' ids or messages mentions `otp`, `is_verified` or `login_required`.
+scores the vulnerable and secure dashboards **identically**, and no rule definition
+in any of the five packs mentions `otp`, `is_verified` or `login_required`.
 
 One registry rule does reach this lab's topic: `is-function-without-parentheses`
 flags any `is_*` attribute read without a call, so it catches `if user.is_verified:`
