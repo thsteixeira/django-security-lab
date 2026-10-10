@@ -4,7 +4,7 @@
 # Command:
 #   bandit -r labs/post_15_mfa/
 #
-# Tool: Bandit 1.9.4  |  Captured: 2026-09-13
+# Tool: Bandit 1.9.4  |  Captured: 2026-10-10
 # Result: a COMPLETE MISS, and the smallest capture in this repo - ONE finding,
 #         on a seeded fixture password. Nothing in any view. The defect is an
 #         ABSENT decorator, which has no AST node.
@@ -22,7 +22,7 @@ $ bandit -r labs/post_15_mfa/
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.3
-Run started:2026-09-14 01:15:59.888372+00:00
+Run started:2026-10-10 00:02:28.813373+00:00
 
 Test results:
 >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'copper meadow transit fifty'
@@ -37,7 +37,7 @@ Test results:
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 352
+	Total lines of code: 360
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 

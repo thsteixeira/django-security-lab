@@ -6,9 +6,9 @@ Companion lab for the blog post
 | | |
 |---|---|
 | **OWASP** | A07:2025 — Authentication Failures |
-| **CWE** | CWE-306 — Missing Authentication for Critical Function · CWE-287 — Improper Authentication |
-| **ASVS** | V2.2.1 — MFA is enforced for the functions it protects, not merely available |
-| **NIST** | SP 800-63B-4 §4.2 — AAL2 requires two distinct authentication factors *for the session that accesses the resource* |
+| **CWE** | CWE-308 — Use of Single-factor Authentication · CWE-287 — Improper Authentication |
+| **ASVS** | 5.0.0 V6.3.4 — no undocumented authentication pathways; controls and authentication strength enforced consistently across them · V6.1.3 — every pathway documented with the strength it must enforce |
+| **NIST** | SP 800-63B-4 §2.2 — AAL2: "proof of possession and control of two distinct authentication factors" |
 | **Detection** | **Nothing finds it, and no custom rule is possible.** Bandit: 1 finding, a fixture password (it misses the hardcoded TOTP seed beside it). Semgrep curated packs: **0/156**. Audit tier: 9/372, the two dashboards scored **identically**, zero matches for `otp`/`is_verified`/`login_required` across all 372 rules. The detection that works is a **test sweep**. See [`scans/`](scans/) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
@@ -147,9 +147,11 @@ holds across workers, which a hand-rolled cache counter would not. While throttl
 even a *correct* code is refused, which is what makes guessing pointless rather
 than merely slow (`test_while_throttled_even_the_correct_code_is_refused`).
 
-Shipping an "unthrottled" view would have meant reaching past the library's own
-API to the raw TOTP verifier — a lab about a straw man. So this lab has one class,
-and `tests.py` asserts the library behaviour instead.
+Turning the throttle off takes a deliberate, documented setting —
+`OTP_TOTP_THROTTLE_FACTOR = 0` ("Set to `0` to disable throttling completely") —
+and a lab whose bug is "someone set the throttle to zero" teaches configuration
+review, not MFA. So this lab has one class, and `tests.py` asserts the library
+behaviour instead.
 
 ## Isolation
 
@@ -163,8 +165,13 @@ and `tests.py` asserts the library behaviour instead.
 
 The write-up is in [`scans/README.md`](scans/README.md). The short version: the
 curated packs return **0 findings from 156 rules**, the audit tier returns 9 and
-scores the vulnerable and secure dashboards **identically**, and grepping all 372
-rules' output for `otp`, `is_verified` or `login_required` returns nothing.
+scores the vulnerable and secure dashboards **identically**, and none of the 372
+rules' ids or messages mentions `otp`, `is_verified` or `login_required`.
+
+One registry rule does reach this lab's topic: `is-function-without-parentheses`
+flags any `is_*` attribute read without a call, so it catches `if user.is_verified:`
+— an MFA check that is always true. It fires here only on `is_authenticated`, a
+property, because nothing in the lab reads `is_verified` without calling it.
 
 **No custom rule is possible**, which is a different answer from the seven rules in
 [`rules/`](../../rules/) that cover eight other labs. Those key on something

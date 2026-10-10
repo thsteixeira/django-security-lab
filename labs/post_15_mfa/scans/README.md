@@ -1,6 +1,7 @@
 # Scan evidence — Lab 15 (Multi-Factor Authentication)
 
-Captured 2026-09-13 against the committed lab. Bandit 1.9.4, Semgrep 1.170.0.
+Captured 2026-09-13; re-captured 2026-10-10 against the current lab, same
+findings, two line numbers moved. Bandit 1.9.4, Semgrep 1.170.0.
 Every command below is reproducible from a clone.
 
 | File | Tool | Headline |
@@ -38,8 +39,9 @@ walks past the seed.
 The mechanism is not subtle: `B105` matches on the **variable name**, against a
 list of password-ish words. `VICTIM_PASSWORD` contains "password". `TOTP_KEY` does
 not contain anything on the list, so the string is just a string. A tool that
-finds credentials by asking what they are *called* will miss every credential
-named after what it actually is.
+finds credentials by asking what they are *called* misses every credential whose
+name is not on its list — "key" is not on B105's, "secret" is. Name the same
+constant `TOTP_SECRET` and Bandit reports it.
 
 ## Semgrep, curated tier: silence
 
@@ -60,7 +62,7 @@ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
 
 | Rule | Where | Relevant? |
 |---|---|---|
-| `direct-use-of-httpresponse` | `views_vulnerable.py` L38, L44 · `views_secure.py` L31, L37 | no — **2 on each**, the labs' plain-text convention (Lab 02's class) |
+| `direct-use-of-httpresponse` | `views_vulnerable.py` L38, L44 · `views_secure.py` L35, L41 | no — **2 on each**, the labs' plain-text convention (Lab 02's class) |
 | `no-csrf-exempt` | `views_verify.py` L37 | no — global CSRF is off by design (Lab 08's class) |
 | `unvalidated-password` | `seed.py` L45 · `tests.py` L47 | no — fixtures calling `set_password()` (Lab 13's class) |
 | `is-function-without-parentheses` | `views_verify.py` L40 · `tests.py` L98 | no — and **wrong**, see below |
@@ -68,34 +70,39 @@ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
 The two dashboards differ by exactly one decorator, and the tier scores them
 **identically**: two `direct-use-of-httpresponse` each. Nothing separates them.
 
-Searching the full JSON output of all 372 rules for `otp`, `is_verified` or
-`login_required` returns **zero matches**. The tooling has no concept of a second
-factor to have an opinion about.
+Without a login, Semgrep's JSON output withholds the matched source
+(`"lines": "requires login"`), so grepping it for `otp`, `is_verified` or
+`login_required` searches rule ids, messages and paths only — and returns **zero
+matches**. No rule in either tier is written about a second factor.
 
-### The one auth-adjacent rule that fires is a false positive
+### The `is_*` rule fires on the fix — and would catch the live trap
 
-`is-function-without-parentheses` fires twice — `views_verify.py:40` and
-`tests.py:98` — both times on the same construct:
+`is-function-without-parentheses` fires twice, on `is_authenticated` read as an
+attribute:
 
 ```python
-if not request.user.is_authenticated:
+if not request.user.is_authenticated:                       # views_verify.py:40
+self.assertTrue(resp.wsgi_request.user.is_authenticated)    # tests.py:98
 ```
 
 The rule exists for a real historical bug — `is_authenticated` used to be a
 method, and `if user.is_authenticated:` on a bound method is always truthy. But it
-stopped being a method in **Django 1.10** (2016) and is a property now, so the
-line above is the correct modern spelling and the rule is firing on the fix.
+stopped being a method in **Django 1.10** (2016) and is a property now, so both
+lines above are the correct modern spelling and the rule is firing on the fix.
 
 That is worth dwelling on, because the *same trap is live for this lab's topic*.
 `is_verified` **is** a method:
 
 ```python
-if user.is_verified:      # always truthy — a bound method. MFA checks nothing.
+if user.is_verified:      # always truthy — the callable itself. MFA checks nothing.
 if user.is_verified():    # correct
 ```
 
-A rule for that would be valuable, and the registry ships one aimed at the
-decade-old version of the problem while the current one goes unmatched.
+(`OTPMiddleware` installs it as `functools.partial(is_verified, user)`, not a bound
+method, but the effect is the same.) The registry rule already covers it: it
+matches any `is_*` attribute read without a call (`metavariable-regex: is_.*`),
+and pointed at `if user.is_verified:` it fires. It is silent on that here only
+because this lab never writes the bug.
 
 ## Why there is no custom rule
 
@@ -149,8 +156,9 @@ checks anything and `throttle_increment()` on failure, so the backoff starts at 
 **first** wrong code and doubles — 1, 2, 4, 8, 16 seconds — with the counter stored
 on the device row, surviving restarts and shared across workers.
 
-That is why this lab has no "unthrottled OTP" view to brute-force: writing one
-would mean reaching past the library's own API to the raw TOTP verifier, which is a
-straw man. The tests pin the behaviour so a future release that weakens it turns
+That is why this lab has no "unthrottled OTP" view to brute-force: turning the
+throttle off takes a deliberate, documented setting (`OTP_TOTP_THROTTLE_FACTOR = 0`),
+and a lab whose bug is "someone set the throttle to zero" teaches configuration
+review, not MFA. The tests pin the behaviour so a future release that weakens it turns
 this repo red instead of quietly making the post wrong — the same reason Lab 13
 asserts that Django's four default validators accept `Password123!`.

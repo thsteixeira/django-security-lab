@@ -19,10 +19,10 @@ You cannot write that pair honestly against ``django-otp``, because
 
 The backoff starts at the **first** failure and doubles — 1, 2, 4, 8, 16 seconds —
 and the counter lives in the device row, so it survives a restart and holds across
-workers, which a cache-based counter of your own would not. To ship an
-"unthrottled OTP" view I would have had to reach past the library's own API and
-call the raw TOTP verifier. That is a lab about a straw man, so this lab does not
-contain one. ``tests.py`` asserts the library's behaviour instead, which means a
+workers, which a cache-based counter of your own would not. Turning it off takes
+a deliberate, documented setting, ``OTP_TOTP_THROTTLE_FACTOR = 0``, and a lab
+whose bug is "someone set the throttle to zero" teaches configuration review, not
+MFA, so this lab does not contain one. ``tests.py`` asserts the library's behaviour instead, which means a
 future release that weakens it turns this repo red rather than quietly making the
 post wrong.
 """

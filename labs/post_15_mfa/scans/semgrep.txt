@@ -5,19 +5,22 @@
 #   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_15_mfa/
 #   semgrep scan --config r/python.django --config r/python              labs/post_15_mfa/
 #
-# Tool: Semgrep 1.170.0  |  Captured: 2026-09-13
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-10
 # Result: the curated packs are COMPLETELY SILENT - 0 findings from 156 rules.
 #         The audit tier returns 9, and not one of them is about authorization:
 #         the two dashboards draw direct-use-of-httpresponse x2 EACH (the labs'
 #         plain-text convention), which is a perfectly symmetric pair carrying no
-#         signal about the gate. Grepping the full JSON for "otp", "is_verified"
-#         or "login_required" returns ZERO matches across all 372 rules.
+#         signal about the gate. No rule id or message in either tier mentions
+#         "otp", "is_verified" or "login_required" (the JSON output withholds
+#         matched source lines without a login, so that is all a grep can see).
 #
-#         The one auth-adjacent rule that fires, is-function-without-parentheses,
-#         fires twice and is a FALSE POSITIVE both times, on correct modern
-#         Django: it flags
-#         `if not request.user.is_authenticated:`, which has been a property
-#         rather than a method since Django 1.10.
+#         is-function-without-parentheses fires twice, and is a FALSE POSITIVE
+#         both times, on correct modern Django: views_verify.py:40
+#         `if not request.user.is_authenticated:` and tests.py:98
+#         `self.assertTrue(resp.wsgi_request.user.is_authenticated)`.
+#         is_authenticated has been a property since Django 1.10. The rule
+#         matches any `is_*` attribute read without a call, so it WOULD catch
+#         `if user.is_verified:` - the lab just never writes that.
 #
 #         No custom rule is possible here (see scans/README.md): which views
 #         require a second factor is a policy decision, not a syntactic property.
@@ -70,6 +73,21 @@ $ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
   <multilang>       3      15          Community     378                                                                
   python          369      11                                                                                           
                                                                                                                         
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 9 (9 blocking)
+ • Rules run: 372
+ • Targets scanned: 15
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 372 rules on 15 files: 9 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                    
                    
 ┌─────────────────┐
@@ -117,11 +135,11 @@ $ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
           vulnerability. Use Django's template engine to safely render HTML.                          
           Details: https://sg.run/EknN                                                                
                                                                                                       
-           31┆ return HttpResponse(
-           32┆     f"<h1>Dashboard</h1><p>{escape(request.user.username)} has no records.</p>"
-           33┆ )
+           35┆ return HttpResponse(
+           36┆     f"<h1>Dashboard</h1><p>{escape(request.user.username)} has no records.</p>"
+           37┆ )
             ⋮┆----------------------------------------
-           37┆ return HttpResponse(f"<h1>Dashboard</h1>{body}")
+           41┆ return HttpResponse(f"<h1>Dashboard</h1>{body}")
                                     
     labs\post_15_mfa\views_verify.py
     ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
@@ -165,18 +183,3 @@ $ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
             ⋮┆----------------------------------------
            44┆ return HttpResponse(f"<h1>Dashboard</h1>{body}")
 
-                
-                
-┌──────────────┐
-│ Scan Summary │
-└──────────────┘
-✅ Scan completed successfully.
- • Findings: 9 (9 blocking)
- • Rules run: 372
- • Targets scanned: 15
- • Parsed lines: ~100.0%
- • Scan was limited to files tracked by git
- • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
-Ran 372 rules on 15 files: 9 findings.
-
-A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading

@@ -192,14 +192,19 @@ class MfaLabTests(TestCase):
         self.assertFalse(self.device.verify_token(live_code(self.device)))
 
     def test_the_backoff_doubles(self):
-        """Required delay is factor * 2**(failures-1): 1, 2, 4, 8, 16 seconds...
+        """Required delay after 1, 2, 3, 4, 5 failures: 1, 2, 4, 8, 16 seconds.
 
+        Literal values, not the library's formula, so a release that flattens or
+        slows the curve fails here. A refused verify_token() does not increment
+        the counter, so the failures are recorded with throttle_increment()
+        directly — the first test above pins that verify_token() calls it.
         Asserted against the model's own fields rather than by sleeping, so the
         suite stays fast and deterministic.
         """
-        factor = self.device.get_throttle_factor()
-        self.assertEqual(factor, 1)
-        self.device.verify_token("000000")
-        _, data = self.device.verify_is_allowed()
-        delay = (data["locked_until"] - self.device.throttling_failure_timestamp).total_seconds()
-        self.assertEqual(delay, factor * 2 ** (self.device.throttling_failure_count - 1))
+        self.assertEqual(self.device.get_throttle_factor(), 1)
+        for expected in (1, 2, 4, 8, 16):
+            self.device.throttle_increment(commit=True)
+            allowed, data = self.device.verify_is_allowed()
+            self.assertFalse(allowed)
+            delay = (data["locked_until"] - self.device.throttling_failure_timestamp).total_seconds()
+            self.assertEqual(delay, expected)
