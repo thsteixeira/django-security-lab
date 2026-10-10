@@ -6,11 +6,14 @@
 #   semgrep scan --config r/python.django --config r/python              labs/post_15_mfa/
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-10-10
-# Result: the curated packs are COMPLETELY SILENT - 0 findings from 156 rules.
+# Result: the curated packs are COMPLETELY SILENT - 0 findings from 180 rules
+#         (151 Python + 5 multilang, plus 24 YAML rules that apply only
+#         because the lab ships rules/mfa.yaml).
 #         The audit tier returns 9, and not one of them is about authorization:
-#         the two dashboards draw direct-use-of-httpresponse x2 EACH (the labs'
-#         plain-text convention), which is a perfectly symmetric pair carrying no
-#         signal about the gate. No rule definition in any of the five packs
+#         the two dashboards draw direct-use-of-httpresponse x2 EACH (both build
+#         their HTML with HttpResponse instead of a template, the labs'
+#         convention), a perfectly symmetric pair carrying no signal about the
+#         gate. No rule definition in any of the five packs
 #         mentions "otp", "is_verified" or "login_required" (registry YAML
 #         grepped 2026-10-10; command and caveat in scans/README.md).
 #
@@ -22,8 +25,9 @@
 #         matches any `is_*` attribute read without a call, so it WOULD catch
 #         `if user.is_verified:` - the lab just never writes that.
 #
-#         No custom rule is possible here (see scans/README.md): which views
-#         require a second factor is a policy decision, not a syntactic property.
+#         No registry rule can split the pair: which views require a second
+#         factor is a policy decision, not a syntactic property. The lab's own
+#         policy rule, told that decision, does - see semgrep-custom-rule.txt.
 # ============================================================================
 
 $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_15_mfa/
@@ -32,12 +36,13 @@ $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs
 ┌─────────────┐
 │ Scan Status │
 └─────────────┘
-  Scanning 15 files tracked by git with 565 Code rules:
+  Scanning 18 files tracked by git with 565 Code rules:
                                                                                                                         
   Language      Rules   Files          Origin      Rules                                                                
  ─────────────────────────────        ───────────────────                                                               
-  <multilang>       5      15          Community     565                                                                
-  python          151      11                                                                                           
+  <multilang>       5      18          Community     565                                                                
+  python          151      12                                                                                           
+  yaml             24       1                                                                                           
                                                                                                                         
                 
                 
@@ -46,12 +51,12 @@ $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs
 └──────────────┘
 ✅ Scan completed successfully.
  • Findings: 0 (0 blocking)
- • Rules run: 156
- • Targets scanned: 15
+ • Rules run: 180
+ • Targets scanned: 18
  • Parsed lines: ~100.0%
  • Scan was limited to files tracked by git
  • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
-Ran 156 rules on 15 files: 0 findings.
+Ran 180 rules on 18 files: 0 findings.
 (need more rules? `semgrep login` for additional free Semgrep Registry rules)
 
 
@@ -66,12 +71,12 @@ $ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
 ┌─────────────┐
 │ Scan Status │
 └─────────────┘
-  Scanning 15 files tracked by git with 378 Code rules:
+  Scanning 18 files tracked by git with 378 Code rules:
                                                                                                                         
   Language      Rules   Files          Origin      Rules                                                                
  ─────────────────────────────        ───────────────────                                                               
-  <multilang>       3      15          Community     378                                                                
-  python          369      11                                                                                           
+  <multilang>       3      18          Community     378                                                                
+  python          369      12                                                                                           
                                                                                                                         
                 
                 
@@ -81,11 +86,11 @@ $ semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
 ✅ Scan completed successfully.
  • Findings: 9 (9 blocking)
  • Rules run: 372
- • Targets scanned: 15
+ • Targets scanned: 18
  • Parsed lines: ~100.0%
  • Scan was limited to files tracked by git
  • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
-Ran 372 rules on 15 files: 9 findings.
+Ran 372 rules on 18 files: 9 findings.
 
 A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                    

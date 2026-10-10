@@ -1,0 +1,99 @@
+rules:
+  - id: thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+    languages: [python]
+    severity: ERROR
+    message: >-
+      $FUNC reads $MODEL, which this project requires a second factor for, behind
+      @login_required and without @otp_required. @login_required only asks whether
+      the request is authenticated - a password-only session answers yes. Gate the
+      view with django_otp.decorators.otp_required, which also requires
+      request.user.is_verified(): true only after django_otp.login(request, device)
+      recorded a verified device on THIS session.
+    metadata:
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A07:2021 - Identification and Authentication Failures"
+        - "A07:2025 - Authentication Failures"
+      cwe: "CWE-308: Use of Single-factor Authentication"
+      asvs: "5.0.0 V6.3.4"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/blog/multi-factor-authentication-why-login-required-is-the-wrong-question-once-you-have-a-second-factor/
+        - https://django-otp-official.readthedocs.io/en/stable/overview.html
+    # Why this rule lives in the lab and not in the repo-wide rules/: it is a
+    # POLICY rule. Nothing in the code says a view needs a second factor - the
+    # vulnerable and secure dashboards are identical below the decorator, and so
+    # is every correct @login_required view in any project. What separates them is
+    # a decision about the data they serve, so the rule has to be told that
+    # decision. The regex below is that decision, written down: the models this
+    # project puts behind MFA. Another project copies the rule and edits the list.
+    #
+    # Against this lab (see scans/semgrep-custom-rule.txt) it fires on
+    # views_vulnerable.py and is silent on views_secure.py - the fire/silent split
+    # no tier of the registry gives (scans/semgrep.txt).
+    #
+    # Known limits, each marked todoruleid in rules/mfa.py:
+    #   * a read inside a helper the view calls - the rule is scoped to the
+    #     decorated function's own body;
+    #   * a class-based view (LoginRequiredMixin) - there is no decorator to key on;
+    #   * a view wrapped in urls.py (path("x/", login_required(view))) - the
+    #     function itself carries no decorator.
+    # And the model list is maintained by hand, the same weakness as the URL list
+    # in the test sweep: a sensitive model added next quarter is not covered until
+    # someone adds it here.
+    patterns:
+      - pattern-either:
+          - pattern-inside: |
+              @django.contrib.auth.decorators.login_required
+              def $FUNC(...):
+                  ...
+          - pattern-inside: |
+              @django.contrib.auth.decorators.login_required(...)
+              def $FUNC(...):
+                  ...
+      - pattern-not-inside: |
+          @django_otp.decorators.otp_required
+          def $FUNC(...):
+              ...
+      - pattern-not-inside: |
+          @django_otp.decorators.otp_required(...)
+          def $FUNC(...):
+              ...
+      - pattern-either:
+          - pattern: $MODEL.objects
+          - pattern: django.shortcuts.get_object_or_404($MODEL, ...)
+          - pattern: django.shortcuts.get_list_or_404($MODEL, ...)
+      # The policy. Add every model whose rows need a second factor.
+      - metavariable-regex:
+          metavariable: $MODEL
+          regex: ^(SensitiveRecord)$
+
+  - id: thiagoteixeira.django.security.mfa.session-minted-without-second-factor
+    languages: [python]
+    severity: INFO
+    message: >-
+      login() mints a full Django session here. If this project has MFA, decide
+      whether this path may produce a session that never presented the second
+      factor - a legacy form, a mobile token exchange, an SSO callback, a
+      log-in-as-customer tool or a password reset that signs the user in. Every
+      such path is a side door around the second factor unless the views it
+      reaches require request.user.is_verified().
+    metadata:
+      owasp:
+        - "A07:2021 - Identification and Authentication Failures"
+        - "A07:2025 - Authentication Failures"
+      cwe: "CWE-308: Use of Single-factor Authentication"
+      asvs: "5.0.0 V6.1.3"
+      confidence: LOW
+      references:
+        - https://thiagoteixeira.tech/blog/multi-factor-authentication-why-login-required-is-the-wrong-question-once-you-have-a-second-factor/
+        - https://docs.djangoproject.com/en/5.2/topics/auth/default/#django.contrib.auth.login
+    # An INVENTORY rule, not a verdict. It cannot know which login() calls are
+    # meant to precede a second factor, so it lists them all for a reviewer - the
+    # "find every path that reaches login()" step the post describes, made
+    # repeatable. django_otp.login() is a different function and is not listed.
+    #
+    # Known limit, marked todoruleid in rules/mfa.py: a hand-rolled session that
+    # writes _auth_user_id itself never calls login(), so it is not listed.
+    pattern: django.contrib.auth.login(...)

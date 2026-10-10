@@ -1,24 +1,28 @@
 # Scan evidence — Lab 15 (Multi-Factor Authentication)
 
-Captured 2026-09-13; re-captured 2026-10-10 against the current lab, same
-findings, two line numbers moved. Bandit 1.9.4, Semgrep 1.170.0.
+Captured 2026-09-13; re-captured 2026-10-10 after the lab gained its policy rule
+(`rules/mfa.yaml` and its fixture): the same findings, over more files. Bandit
+1.9.4, Semgrep 1.170.0.
 Every command below is reproducible from a clone.
 
 | File | Tool | Headline |
 |---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | **1 finding** — a fixture password; it misses the hardcoded TOTP secret beside it |
-| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | curated packs **0/156**; audit tier 9/372, none about authorization |
+| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | curated packs **0/180**; audit tier 9/372, none about authorization |
+| [`semgrep-custom-rule.txt`](semgrep-custom-rule.txt) | Semgrep 1.170.0 | the lab's **policy rule**: fires on the vulnerable dashboard, silent on the secure one; fixture 2/2 |
 
-This lab ships **no custom rule**. Nor do Labs 11, 12 and 13 — but those three are
-silent for ordinary reasons (an absent control, a setting, an audit-tier rule that
-already fires). Here the reason is different in kind: the thing that is wrong
-cannot be expressed as a pattern at all. That conclusion is the finding.
+No registry rule tells the bug from the fix, and none can on its own: the two
+dashboards are identical below `@login_required` / `@otp_required`, and which
+views need a second factor is a decision about their data. So this lab ships a
+**policy rule** — told that decision — and keeps it in its own `rules/`, beside
+the models it names, rather than in the repo-wide `rules/`.
 
 ## Bandit: one finding, and it is the wrong constant
 
 ```bash
 bandit -r labs/post_15_mfa/
-# Total issues (by severity): Low: 1
+# >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'copper meadow transit fifty'
+#    Location: labs/post_15_mfa/seed.py:33:18
 ```
 
 The single finding is `B105 hardcoded_password_string` on `seed.py:33`,
@@ -47,22 +51,24 @@ constant `TOTP_SECRET` and Bandit reports it.
 
 ```bash
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_15_mfa/
-# Ran 156 rules on 15 files: 0 findings.
+# Ran 180 rules on 18 files: 0 findings.
 ```
 
 Zero. Not a false positive to triage, not a near miss — the curated packs have
-nothing to say about a Django project with MFA wired into it.
+nothing to say about a Django project with MFA wired into it. (180 = 151 Python
++ 5 multilang rules, plus 24 YAML rules that apply only because the lab now ships
+`rules/mfa.yaml`.)
 
 ## Semgrep, audit/registry tier: 9 findings, none about the gate
 
 ```bash
 semgrep scan --config r/python.django --config r/python labs/post_15_mfa/
-# Ran 372 rules on 15 files: 9 findings.
+# Ran 372 rules on 18 files: 9 findings.
 ```
 
 | Rule | Where | Relevant? |
 |---|---|---|
-| `direct-use-of-httpresponse` | `views_vulnerable.py` L38, L44 · `views_secure.py` L35, L41 | no — **2 on each**, the labs' plain-text convention (Lab 02's class) |
+| `direct-use-of-httpresponse` | `views_vulnerable.py` L38, L44 · `views_secure.py` L35, L41 | no — **2 on each**: both build their HTML with `HttpResponse` instead of a template, the labs' convention (Lab 02's class) |
 | `no-csrf-exempt` | `views_verify.py` L37 | no — global CSRF is off by design (Lab 08's class) |
 | `unvalidated-password` | `seed.py` L45 · `tests.py` L47 | no — fixtures calling `set_password()` (Lab 13's class) |
 | `is-function-without-parentheses` | `views_verify.py` L40 · `tests.py` L98 | no — and **wrong**, see below |
@@ -79,7 +85,11 @@ or `otp` in any case returns **zero matches**:
 for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
   curl -sL "https://semgrep.dev/c/$c" | grep -cE 'is_verified|login_required|[Oo][Tt][Pp]'
 done
-# 0 0 0 0 0
+# 0
+# 0
+# 0
+# 0
+# 0
 ```
 
 Make the whole pattern case-insensitive and `p/owasp-top-ten` returns 4 lines,
@@ -117,31 +127,56 @@ matches any `is_*` attribute read without a call (`metavariable-regex: is_.*`),
 and pointed at `if user.is_verified:` it fires. It is silent on that here only
 because this lab never writes the bug.
 
-## Why there is no custom rule
+## The custom rule: the policy, written down
 
-Seven rules live in `rules/`, covering eight labs (Labs 07 and 10 share one).
-This lab adds none, and the reason is a category difference rather than effort.
-
-Those seven all key on something **present and wrong**: `mark_safe()` on
-a non-literal, `fields="__all__"` in a `Meta`, an `os.path.join` reaching `open`,
-a token parameter reaching `set_password()` with no `check_token()`. Each is a
-syntactic fact about code that exists.
-
-Here the defect is `@login_required` on a view that **should** have carried
+The defect is `@login_required` on a view that **should** have carried
 `@otp_required`. There is no syntactic difference between that and the thousands
 of `@login_required` views that are entirely correct — a marketing dashboard, a
 profile page, a support form. Which views sit behind a second factor is a
-**policy decision about the data they serve**, and a pattern matcher cannot read
-policy. A rule that flagged every `@login_required` view would fire on all of them
-and mean nothing, which is the definition of noise.
+**policy decision about the data they serve**. A rule that flagged every
+`@login_required` view would fire on all of them and mean nothing.
 
-This is the same floor Lab 11 (brute force) and Lab 12 (session fixation) hit,
-from a third direction: there the defect was an absent control and a
-wrongly-keyed one; here it is a *correct* control applied to the wrong question.
+Semgrep cannot guess that policy, but it can enforce one it is given.
+[`rules/mfa.yaml`](../rules/mfa.yaml) carries two rules:
 
-## What detects it instead
+- **`sensitive-model-behind-password-only-gate`** (ERROR). The policy is one
+  regex: the models this project puts behind MFA (`^(SensitiveRecord)$`). The rule
+  flags a function decorated `@login_required` — bare or called with arguments —
+  and not `@otp_required`, that reads one of them through `.objects`,
+  `get_object_or_404()` or `get_list_or_404()`.
+- **`session-minted-without-second-factor`** (INFO). An inventory, not a verdict:
+  it lists every `django.contrib.auth.login()` call, the session-minting paths
+  the post says to find. `django_otp.login()` is a different function and is not
+  listed.
 
-A test, and specifically a sweep — `test_sweep_reports_which_urls_a_password_only_session_can_reach`:
+```bash
+semgrep scan --config labs/post_15_mfa/rules/mfa.yaml \
+    labs/post_15_mfa/views_vulnerable.py labs/post_15_mfa/views_secure.py \
+    labs/_common/views.py
+# Ran 2 rules on 3 files: 2 findings.
+semgrep --test --config labs/post_15_mfa/rules/ labs/post_15_mfa/rules/
+# 2/2: ✓ All tests passed
+```
+
+The two findings: the gate rule on `views_vulnerable.py:36`, and the inventory
+rule on `labs/_common/views.py:28`. The gate rule is **silent on the secure
+dashboard** — the split no registry tier gives. The inventory rule finds the shared
+password-only endpoint that is this lab's side door. Both commands run in CI.
+
+The fixture ([`rules/mfa.py`](../rules/mfa.py)) also records what the rules
+cannot see, each marked `todoruleid`: a sensitive read inside a helper the view
+calls, a class-based view (`LoginRequiredMixin` has no decorator to key on), a
+view wrapped in `urls.py`, and a hand-rolled session that writes `_auth_user_id`
+without calling `login()`. And the model list is kept by hand: a sensitive model
+added next quarter is not covered until someone adds it to the regex.
+
+It lives in the lab rather than in the repo-wide `rules/` because it is not a
+general Django rule: the regex names this lab's models. Another project copies it
+and edits the list.
+
+## And a test sweep
+
+The rule needs a model list; the test needs a URL list. A sweep — `test_sweep_reports_which_urls_a_password_only_session_can_reach`:
 
 ```python
 protected_area = [VULN, SECURE]
@@ -158,8 +193,10 @@ in the abstract.
 
 It is worth being clear about what that costs: the list of protected URLs is
 maintained by hand, so a view added next quarter is not covered until someone adds
-it. That is a real weakness, and it is still better than the alternative, because
-the alternative is nothing.
+it — the same weakness as the rule's model list. The two fail differently, which is
+why the lab keeps both: the rule reads code without running it, the sweep exercises
+behaviour without reading code. A sensitive read the rule cannot see — in a helper,
+in a class-based view — still answers 200 to the sweep, if its URL is on the list.
 
 ## A library behaviour this lab pins
 

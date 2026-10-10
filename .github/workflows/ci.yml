@@ -56,13 +56,13 @@ jobs:
       # its steps below: Lab 01 (SQLi), Lab 04 (command injection), Lab 08 (CSRF,
       # via Semgrep's audit tier). Labs the standard tools MISS or can't-distinguish
       # ship a custom rule and are asserted — and documented — in the custom-rules
-      # job below (02, 03, 05, 06, 07, 09, 10, 14). Lab 11 (brute force) has no static signal in
+      # job below (02, 03, 05, 06, 07, 09, 10, 14, 15). Lab 11 (brute force) has no static signal in
       # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
-      # Lab 15 (MFA) likewise carries no SAST assert, for a different reason: the
-      # defect is @login_required where @otp_required belonged, and no pattern can
-      # know which views require a second factor. Curated packs are 0/156 and the
-      # audit tier scores both dashboards identically; the gate is tests.py, whose
-      # sweep drives a password-only session at every protected URL.
+      # Lab 15 (MFA) carries no assert here either: the defect is @login_required
+      # where @otp_required belonged, curated packs are 0/180 and the audit tier
+      # scores both dashboards identically. Its custom POLICY rule is asserted in
+      # the custom-rules job below, and tests.py's sweep drives a password-only
+      # session at every protected URL.
 
       # Lab 01 (SQL injection) — the standard tools catch it cleanly: both fire on
       # the vulnerable view and stay silent on the secure one.
@@ -164,6 +164,13 @@ jobs:
       #     change-your-own-password view that is simply correct.
       #     rules/password_reset.yaml keys on an unverified token parameter reaching
       #     set_password().
+      #   Lab 15 (MFA) — can't-distinguish, and no rule CAN without being told the
+      #     policy: the dashboards are identical below @login_required vs
+      #     @otp_required, and which views need a second factor is a decision about
+      #     their data. Its rule therefore lives in the lab, not in rules/ —
+      #     labs/post_15_mfa/rules/mfa.yaml names the MFA-protected models and flags
+      #     a @login_required view without @otp_required that reads one, plus an
+      #     INFO inventory of every login() call (the session-minting side doors).
       # (Labs the standard tools DO catch are asserted in the sast job: 01 SQLi and
       # 04 command injection directly, 08 CSRF via Semgrep's audit tier. Lab 11
       # brute force ships NO rule — a forgeable key + a missing control, unmatchable
@@ -272,6 +279,22 @@ jobs:
           semgrep scan --config rules/password_reset.yaml --json --quiet \
             labs/post_14_password_reset/views_secure.py > rule_pr_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_pr_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Lab 15 (MFA) — a policy rule, kept inside its lab because the policy (which
+      # models need a second factor) belongs to that lab's code. Same two checks as
+      # every rule above: its stem-paired fixture, then fire/silent on the pair.
+      - name: MFA policy rules pass their fixture (semgrep --test)
+        run: semgrep --test --config labs/post_15_mfa/rules/ labs/post_15_mfa/rules/
+      - name: MFA policy rule fires on the vulnerable view
+        run: |
+          semgrep scan --config labs/post_15_mfa/rules/mfa.yaml --json --quiet \
+            labs/post_15_mfa/views_vulnerable.py > rule_mfa_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_mfa_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: MFA policy rule is silent on the secure view
+        run: |
+          semgrep scan --config labs/post_15_mfa/rules/mfa.yaml --json --quiet \
+            labs/post_15_mfa/views_secure.py > rule_mfa_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_mfa_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
   sca:
     name: SCA — pip-audit

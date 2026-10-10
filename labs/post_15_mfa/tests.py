@@ -148,7 +148,7 @@ class MfaLabTests(TestCase):
     # --- the sweep: the detection that actually works ------------------------
 
     def test_sweep_reports_which_urls_a_password_only_session_can_reach(self):
-        """No scanner finds this class, so the check has to be written as a test.
+        """No standard scanner finds this class, and the policy rule sees only code.
 
         The technique generalises and is the one thing worth copying out of this
         lab: enumerate the URLs that are supposed to sit behind the second

@@ -1,0 +1,80 @@
+# ============================================================================
+# SAST evidence - the lab's own policy rule vs Lab 15
+#
+# Commands:
+#   semgrep scan --config labs/post_15_mfa/rules/mfa.yaml \
+#       labs/post_15_mfa/views_vulnerable.py labs/post_15_mfa/views_secure.py \
+#       labs/_common/views.py
+#   semgrep --test --config labs/post_15_mfa/rules/ labs/post_15_mfa/rules/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-10
+# Result: the split no registry tier gives. sensitive-model-behind-password-
+#         only-gate fires on views_vulnerable.py:36 and is SILENT on
+#         views_secure.py - the two files are identical below the decorator.
+#         session-minted-without-second-factor (INFO, an inventory, not a
+#         verdict) lists the one login() that mints this lab's sessions: the
+#         shared password-only side door at labs/_common/views.py:28.
+#         The stem-paired fixture passes 2/2, covering the decorator called
+#         with arguments, both stacking orders of a correct view,
+#         get_object_or_404(), a @login_required view on a model the policy does
+#         not name (must stay silent), django_otp.login() (must not be listed),
+#         and four accepted blind spots marked todoruleid: a read in a helper, a
+#         class-based view, a view wrapped in urls.py, and a hand-rolled session.
+#         All of it runs in CI. See scans/README.md.
+# ============================================================================
+
+$ semgrep scan --config labs/post_15_mfa/rules/mfa.yaml labs/post_15_mfa/views_vulnerable.py labs/post_15_mfa/views_secure.py labs/_common/views.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 3 files tracked by git with 2 Code rules:
+  Scanning 3 files with 2 python rules.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 2 (2 blocking)
+ • Rules run: 2
+ • Targets scanned: 3
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 2 rules on 3 files: 2 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 2 Code Findings │
+└─────────────────┘
+                         
+    labs\_common\views.py
+     ❱ labs.post_15_mfa.rules.thiagoteixeira.django.security.mfa.session-minted-without-second-factor
+          ❰❰ Blocking ❱❱
+          login() mints a full Django session here. If this project has MFA, decide whether this path may   
+          produce a session that never presented the second factor - a legacy form, a mobile token exchange,
+          an SSO callback, a log-in-as-customer tool or a password reset that signs the user in. Every such 
+          path is a side door around the second factor unless the views it reaches require                  
+          request.user.is_verified().                                                                       
+                                                                                                            
+           28┆ login(request, user)
+                                        
+    labs\post_15_mfa\views_vulnerable.py
+   ❯❯❱ labs.post_15_mfa.rules.thiagoteixeira.django.security.mfa.sensitive-model-behind-password-only-gate
+          ❰❰ Blocking ❱❱
+          dashboard reads SensitiveRecord, which this project requires a second factor for, behind           
+          @login_required and without @otp_required. @login_required only asks whether the request is        
+          authenticated - a password-only session answers yes. Gate the view with                            
+          django_otp.decorators.otp_required, which also requires request.user.is_verified(): true only after
+          django_otp.login(request, device) recorded a verified device on THIS session.                      
+                                                                                                             
+           36┆ rows = SensitiveRecord.objects.filter(owner=request.user)
+
+
+
+$ semgrep --test --config labs/post_15_mfa/rules/ labs/post_15_mfa/rules/
+2/2: ✓ All tests passed
+No tests for fixes found.

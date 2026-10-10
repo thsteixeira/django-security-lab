@@ -9,7 +9,7 @@ Companion lab for the blog post
 | **CWE** | CWE-308 — Use of Single-factor Authentication · CWE-287 — Improper Authentication |
 | **ASVS** | 5.0.0 V6.3.4 — no undocumented authentication pathways; controls and authentication strength enforced consistently across them · V6.1.3 — every pathway documented with the strength it must enforce |
 | **NIST** | SP 800-63B-4 §2.2 — AAL2: "proof of possession and control of two distinct authentication factors" |
-| **Detection** | **Nothing finds it, and no custom rule is possible.** Bandit: 1 finding, a fixture password (it misses the hardcoded TOTP seed beside it). Semgrep curated packs: **0/156**. Audit tier: 9/372, the two dashboards scored **identically**, no rule definition in any pack mentions `otp`/`is_verified`/`login_required`. The detection that works is a **test sweep**. See [`scans/`](scans/) |
+| **Detection** | **No standard tool finds it, and no rule can without being told the policy.** Bandit: 1 finding, a fixture password (it misses the hardcoded TOTP seed beside it). Semgrep curated packs: **0/180**. Audit tier: 9/372, the two dashboards scored **identically**, no rule definition in any pack mentions `otp`/`is_verified`/`login_required`. So the lab ships a **policy rule** in its own [`rules/mfa.yaml`](rules/mfa.yaml) — it names the MFA-protected models — and a **test sweep**. See [`scans/`](scans/) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -109,7 +109,7 @@ for what Bandit does and does not notice about it.)
 
 ```bash
 docker compose run --rm web python manage.py test labs.post_15_mfa
-# Ran 13 tests in 4.596s
+# Ran 13 tests in 3.392s
 # OK
 ```
 
@@ -119,7 +119,7 @@ the moment `views_vulnerable.dashboard` starts requiring verification.
 Two groups are worth reading beyond that:
 
 - **`test_sweep_reports_which_urls_a_password_only_session_can_reach`** is the
-  detection technique, since no scanner has one. Drive every URL that should sit
+  detection technique that needs no policy file, only a URL list. Drive every URL that should sit
   behind the second factor with a password-only session and collect the ones that
   answer 200. In your project the assertion is `assertEqual(reachable, [])`.
 - **Three tests pin `django-otp`'s own throttling**, which is library behaviour
@@ -129,8 +129,9 @@ Two groups are worth reading beyond that:
 
 The plan for this lab called for a second vulnerable/secure pair — an OTP verify
 endpoint with no rate limit beside one with a throttle — so a reader could watch a
-six-digit code get brute-forced. That pair is not here, because you cannot write
-it honestly against `django-otp`. `TOTPDevice.verify_token()` throttles itself:
+six-digit code get brute-forced. That pair is not here, because `django-otp` does
+not let you build the vulnerable half by accident. `TOTPDevice.verify_token()`
+throttles itself:
 
 ```python
 verify_allowed, _ = self.verify_is_allowed()
@@ -164,7 +165,7 @@ behaviour instead.
 ## Scanning it
 
 The write-up is in [`scans/README.md`](scans/README.md). The short version: the
-curated packs return **0 findings from 156 rules**, the audit tier returns 9 and
+curated packs return **0 findings from 180 rules**, the audit tier returns 9 and
 scores the vulnerable and secure dashboards **identically**, and no rule definition
 in any of the five packs mentions `otp`, `is_verified` or `login_required`.
 
@@ -173,10 +174,16 @@ flags any `is_*` attribute read without a call, so it catches `if user.is_verifi
 — an MFA check that is always true. It fires here only on `is_authenticated`, a
 property, because nothing in the lab reads `is_verified` without calling it.
 
-**No custom rule is possible**, which is a different answer from the seven rules in
-[`rules/`](../../rules/) that cover eight other labs. Those key on something
-present and wrong. Here the defect is
+**So the lab ships a policy rule**, in its own [`rules/mfa.yaml`](rules/mfa.yaml)
+rather than the repo-wide [`rules/`](../../rules/). The defect is
 `@login_required` on a view that should have had `@otp_required` — and there is no
 syntactic difference between that and the thousands of `@login_required` views
 that are perfectly correct. Which views sit behind a second factor is a policy
-decision about the data they serve, and a pattern matcher cannot read policy.
+decision about the data they serve, so the rule is told it: a regex naming the
+models that need a second factor. It flags a `@login_required` view without
+`@otp_required` that reads one — the vulnerable dashboard, not the secure one —
+and a second, INFO-level rule lists every `login()` call, the session-minting side
+doors. Its fixture, [`rules/mfa.py`](rules/mfa.py), records what it cannot see: a
+read in a helper, a class-based view, a view wrapped in `urls.py`, a hand-rolled
+session. Both run in CI; the capture is
+[`scans/semgrep-custom-rule.txt`](scans/semgrep-custom-rule.txt).

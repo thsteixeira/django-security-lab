@@ -38,6 +38,9 @@ have on hand.
 labs/post_NN_<topic>/   runnable vulnerable + secure views, a CTF flag, tests, a teaching README
 rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, present only for the
                         rare post where the standard tools miss a Django-specific pattern (see below)
+labs/post_NN_<topic>/rules/
+                        OPTIONAL — a POLICY rule that only makes sense with that lab's own models,
+                        so it lives beside them (Lab 15)
 ```
 
 | # | Post / topic | Lab | Detection |
@@ -56,7 +59,7 @@ rules/<topic>.{yaml,py} OPTIONAL — a custom Semgrep rule + its test fixture, p
 | 12 | Session Hijacking & Fixation | [`labs/post_12_session_fixation/`](labs/post_12_session_fixation/) | **No SAST tier finds it** (an absent `cycle_key()` and a *setting*) — the signal is Django's own **`manage.py check --deploy`** (`security.W012`), plus `tests.py` and a `curl` fixation probe |
 | 13 | Weak Passwords & Validators | [`labs/post_13_weak_passwords/`](labs/post_13_weak_passwords/) | SAST — Bandit and the curated packs **miss**; Semgrep's **audit-tier** `unvalidated-password` fires on the bug and is silent on the inline fix, so **no custom rule** — but it false-positives on the idiomatic `Form` view and its published autofix is broken |
 | 14 | Password Reset Flows | [`labs/post_14_password_reset/`](labs/post_14_password_reset/) | SAST — **no tier can tell bug from fix**: every finding in the two confirm views lands on the vulnerable *and* secure one in matching pairs, so a **custom rule** ([`rules/password_reset.yaml`](rules/password_reset.yaml)) supplies the only fire/silent signal, asserted in the hermetic CI job |
-| 15 | Multi-Factor Authentication | [`labs/post_15_mfa/`](labs/post_15_mfa/) | **Nothing finds it, and no custom rule is possible** — the defect is `@login_required` where `@otp_required` belonged, and which views need a second factor is policy, not syntax. Curated packs **0/156**; the audit tier scores both dashboards identically. The detection is a **test sweep** |
+| 15 | Multi-Factor Authentication | [`labs/post_15_mfa/`](labs/post_15_mfa/) | SAST — **no tier can tell bug from fix**: the defect is `@login_required` where `@otp_required` belonged, curated packs are **0/180** and the audit tier scores both dashboards identically. Which views need a second factor is policy, not syntax, so the lab ships a **policy rule** that is told it ([`labs/post_15_mfa/rules/mfa.yaml`](labs/post_15_mfa/rules/mfa.yaml): the MFA-protected models, plus an inventory of every `login()` call), asserted in the hermetic CI job, beside a **test sweep** |
 
 ## Run the labs
 
