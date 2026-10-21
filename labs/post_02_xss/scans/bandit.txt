@@ -7,8 +7,10 @@
 # Tool: Bandit 1.9.4  |  Captured: 2026-07-24
 # Result: FOUR findings - B308 and B703 on BOTH views. Bandit flags the
 #         vulnerable mark_safe(c.body) AND the secure
-#         mark_safe(nh3.clean(c.body)) identically, because it matches the
-#         mark_safe() call itself and does not look at what is inside it.
+#         mark_safe(nh3.clean(c.body)) identically: B308 matches the
+#         mark_safe() call by name, and B703, which does read the argument,
+#         treats only string literals (and .format()/% on a literal) as safe -
+#         it does not know nh3.clean().
 #         The finding on views_secure.py is a FALSE POSITIVE: that code is the
 #         recommended fix. This is why Lab 02 carries no SAST scan-assert in
 #         CI - "fires on vulnerable, silent on secure" is not true here.

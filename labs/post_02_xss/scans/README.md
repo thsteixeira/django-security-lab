@@ -17,10 +17,11 @@ Lab 01 (SQL injection) asserts in CI that the SAST tools **fire on the
 vulnerable view and stay silent on the secure one**. For XSS-via-`mark_safe`
 neither standard tool can do that, for two different reasons:
 
-**Bandit flags both views.** `B308`/`B703` are blacklist checks that match the
-`mark_safe()` call by name and never look at the argument, so `mark_safe(c.body)`
-(the bug) and `mark_safe(nh3.clean(c.body))` (the fix) are indistinguishable to
-it. The finding on `views_secure.py` is a false positive against correct code.
+**Bandit flags both views.** `B308` is a blacklist check that matches the
+`mark_safe()` call by name, and `B703` reads the argument but treats only string
+literals (and `.format()`/`%` on a literal) as safe; neither knows `nh3.clean()`,
+so `mark_safe(c.body)` (the bug) and `mark_safe(nh3.clean(c.body))` (the fix) are
+indistinguishable to it. The finding on `views_secure.py` is a false positive against correct code.
 
 **Semgrep's community rules report nothing at all**, on either view — and *not*
 because of taint. Semgrep *has* a `mark_safe` rule
@@ -28,8 +29,9 @@ because of taint. Semgrep *has* a `mark_safe` rule
 but it is tagged `subcategory: audit`, `confidence: LOW`, and the curated packs
 (`p/django`, `p/python`, `p/owasp-top-ten`) don't include it — none of the 156
 rules that run target `mark_safe`. Run that rule directly and it fires on **both**
-views anyway: it excludes only `format_html()` and string literals, not
-`nh3.clean()`, so it flags the sanitised fix exactly as Bandit does.
+views anyway: it skips only string literals and calls nested inside
+`format_html()`, not `nh3.clean()`, so it flags the sanitised fix just as Bandit
+does.
 
 That is exactly the narrow, documented case where a **custom rule** earns its
 place ([`rules/xss.yaml`](../../../rules/xss.yaml), with the stem-paired fixture
@@ -43,9 +45,15 @@ assert on the two views).
 
 Its one honest limit, documented in the fixture as `todook`: being syntactic, it
 cannot see sanitisation done one line earlier through a variable
-(`c = nh3.clean(x); mark_safe(c)`). Taint mode would catch that, but it needs a
-source it can trace, and an OSS engine does not resolve a stored model field as
-one. The lab views call `mark_safe()` inline, where the rule is exact.
+(`c = nh3.clean(x); mark_safe(c)`). Taint mode would catch that too, given a
+source you declare yourself: a rule with source `$M.objects.$F(...)`, sanitiser
+`nh3.clean(...)` and sink `mark_safe(...)` fires on the vulnerable view and stays
+silent on the secure one in the OSS engine (checked with Semgrep 1.170.0 on
+2026-10-21). It also matches only the bare name `mark_safe(...)` -
+`safestring.mark_safe(x)`, an import alias and `SafeString(x)` slip past it, and
+it never sees templates (`| safe`, `{% autoescape off %}`) - while
+`from nh3 import clean` and `bleach.clean` count as unsanitised. The lab views
+call `mark_safe()` inline, where the rule is exact.
 
 Alongside the rule, `tests.py` remains the runnable proof of the vulnerability
 itself (exploit succeeds on the vulnerable view, neutralised on the secure one,

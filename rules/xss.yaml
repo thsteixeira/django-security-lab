@@ -15,17 +15,19 @@ rules:
         - "A03:2021 - Injection"
         - "A05:2025 - Injection"
       cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
-      asvs: "V5.3.3"
+      asvs: "4.0.3 V5.3.3"
       confidence: MEDIUM
       references:
         - https://thiagoteixeira.tech/blog/cross-site-scripting-xss-stored-reflected-dom-based-attacks-mark-safe-unsafe-markdown/
     # Why this rule exists (and is not a community rule): the standard tools
-    # cannot separate the bug from the fix here. Bandit's B308/B703 flag EVERY
-    # mark_safe() call by name - both the vulnerable view and the nh3-sanitised
-    # secure one. Semgrep's own mark_safe rule (avoid-mark-safe) is audit/LOW and
+    # cannot separate the bug from the fix here. Bandit flags both the
+    # vulnerable view and the nh3-sanitised secure one: B308 matches mark_safe()
+    # by name, and B703 reads the argument but treats only string literals (and
+    # .format()/% on a literal) as safe. Semgrep's own mark_safe rule (avoid-mark-safe) is audit/LOW and
     # not in the curated packs (p/django etc.), so a normal community scan reports
-    # nothing; run it directly and it fires on both views too - it excludes only
-    # format_html() and string literals, not nh3.clean(). This rule is
+    # nothing; run it directly and it fires on both views too - it skips only
+    # string literals and calls nested inside format_html(), not nh3.clean().
+    # This rule is
     # deliberately syntactic: it treats mark_safe() on anything that is not a
     # string literal and not an allowlist-sanitiser/escaper call as suspect - so
     # it fires on the unsanitised call and goes silent once nh3.clean() is in the
@@ -34,9 +36,12 @@ rules:
     # Known limit (documented in rules/xss.py): being syntactic, it cannot see
     # sanitisation that happened one line earlier through a variable -
     # `c = nh3.clean(x); mark_safe(c)` is a false positive. Taint mode would
-    # catch that, but it needs a source it can trace, and a stored-XSS model
-    # field is not one the OSS engine resolves. The lab views call mark_safe()
-    # inline, where this rule is exact.
+    # catch that too, with a declared source such as `$M.objects.$F(...)` and
+    # nh3.clean(...) as the sanitiser (checked in the OSS engine, 1.170.0). It
+    # also matches only the bare name mark_safe(...): safestring.mark_safe(x),
+    # an import alias and SafeString(x) slip past it, and it never sees
+    # templates. The lab views call mark_safe() inline, where this rule is
+    # exact.
     patterns:
       - pattern: mark_safe($X)
       - pattern-not: mark_safe("...")

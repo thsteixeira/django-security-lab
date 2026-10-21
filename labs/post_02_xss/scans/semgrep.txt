@@ -7,11 +7,10 @@
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-07-24
 # Result: ZERO findings, on both views. 156 community rules ran and none of
-#         them models "mark_safe() reached by an unsanitised model field".
-#         Semgrep's taint tracking needs a source it recognises; a value read
-#         off a model instance is not one, so there is no path to follow and
-#         nothing to report. It is not a false negative in the rules' own terms
-#         - the pattern simply is not covered.
+#         them targets mark_safe(): Semgrep's own mark_safe rule
+#         (avoid-mark-safe) is an audit / LOW-confidence rule the curated packs
+#         do not include. It is not a false negative in the rules' own terms -
+#         the pattern simply is not covered (see README.md).
 #
 # So the two SAST tools fail in opposite directions on the same code: Bandit
 # flags both the bug and the fix (too coarse - see bandit.txt), Semgrep flags
