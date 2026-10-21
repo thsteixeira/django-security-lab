@@ -1,7 +1,7 @@
 """SECURE search view — the same feature, done safely.
 
 The search term never touches the SQL string. The ORM sends a parameterised
-query (`... WHERE title ILIKE %s`) and binds the value separately, so the same
+query (`... UPPER(title) LIKE UPPER(%s)`) and passes `q` as a parameter, so the same
 UNION payload that captures the flag against the vulnerable view is treated as a
 literal search string here and matches nothing.
 
