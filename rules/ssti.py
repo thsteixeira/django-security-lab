@@ -4,7 +4,7 @@
 It mirrors Lab 03's two views: compiling a Template from user input is the bug;
 passing user input as context data to a fixed-literal template is the fix. The
 Jinja2 from_string() variant is the Pattern 2 (RCE) case from the post. The
-indirect case documents the rule's one known limit — being syntactic, it cannot
+indirect case documents the rule's best-known limit — being syntactic, it cannot
 see that a variable holds a literal (a false positive marked todook).
 """
 from django.template import Context, Template, engines

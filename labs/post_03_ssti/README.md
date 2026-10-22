@@ -164,8 +164,9 @@ semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py       # 
 ```
 
 **No DAST here.** SSTI has URL-driven scanners (SSTImap, tplmap, Nuclei, ZAP),
-but they confirm injection by making the engine *evaluate* a probe — and DTL
-never does, so against this DTL-only lab they all report *not injectable*.
+but they confirm injection through engine plugins that make the engine *evaluate*
+a probe or raise its own errors — DTL never evaluates, and SSTImap has no Django
+plugin — so none of them is built to notice this lab leaking context.
 Expression-probe DAST is blind to DTL's disclosure-class SSTI; it becomes real
 only against a Jinja2 backend. The full reasoning and captured runs are in
 [`scans/`](scans/).

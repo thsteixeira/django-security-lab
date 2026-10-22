@@ -17,8 +17,8 @@ rules:
       owasp:
         - "A03:2021 - Injection"
         - "A05:2025 - Injection"
-      cwe: "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine ('Server-Side Template Injection')"
-      asvs: "V5.2.5"
+      cwe: "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      asvs: "4.0.3 V5.2.5"
       confidence: MEDIUM
       references:
         - https://thiagoteixeira.tech/blog/server-side-template-injection-ssti-when-django-templates-become-a-weapon/
@@ -34,7 +34,13 @@ rules:
     #
     # Known limit (documented in rules/ssti.py): being syntactic, it cannot see
     # that a variable holds a literal - `t = "{{ v }}"; Template(t)` is a false
-    # positive. The lab views compile inline, where this rule is exact.
+    # positive. It also matches only the call shapes it names:
+    # Template(t, engine=e), Template(template_string=t) and template.Template(t)
+    # slip past Template($X). And it cannot tell a sandboxed Jinja2 environment
+    # from a plain one: `_sandbox.from_string(body)` - the post's Pattern 2 fix -
+    # is flagged as loudly as the bug, as is any unrelated .from_string() method
+    # called on a variable. The lab views compile inline, where this rule is
+    # exact.
     patterns:
       - pattern-either:
           - pattern: Template($X)

@@ -56,17 +56,23 @@ semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_vulnerable.py   # 
 semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py       # 0 findings
 ```
 
-The rule's one honest limit — being syntactic, it cannot see that a variable
+The rule's best-known limit — being syntactic, it cannot see that a variable
 holds a literal (`t = "{{ v }}"; Template(t)`) — is documented in the fixture as
-`todook`.
+`todook`. It also matches only the call shapes it names: `Template(t, engine=e)`,
+`Template(template_string=t)` and `template.Template(t)` slip past
+`Template($X)` (checked with Semgrep 1.170.0 on 2026-10-22). And it cannot
+tell a sandboxed Jinja2 environment from a plain one: `_sandbox.from_string(body)`,
+the post's Pattern 2 fix, is flagged as loudly as the bug, as is any unrelated
+`.from_string()` method called on a variable.
 
 ## Why no DAST here
 
 SSTI *does* have URL-driven DAST tools (SSTImap, tplmap, Nuclei, ZAP's SSTI
-rule), unlike stored XSS — but they all confirm injection by making the engine
-**evaluate** a probe such as `{{7*7}}`, and Django's DTL never evaluates
-expressions (it raises `TemplateSyntaxError` at parse time). So against this
-DTL-only lab every one of them reports *not injectable* even though the view is
-leaking context. Expression-probe DAST is blind to DTL's disclosure-class SSTI;
+rule), unlike stored XSS — but they confirm injection through engine-specific
+plugins that make the engine **evaluate** a probe such as `{{7*7}}` or raise that
+engine's own errors, and Django's DTL never evaluates expressions (it raises
+`TemplateSyntaxError` at parse time). SSTImap's engine list, for one, has no
+Django entry. None of them has been run against this lab, so no DAST capture is
+committed; none is built to notice a view leaking context. Expression-probe DAST is blind to DTL's disclosure-class SSTI;
 it becomes a real, RCE-confirming capture only against an expression-evaluating
 engine (a Jinja2 backend), which this lab deliberately does not ship.
