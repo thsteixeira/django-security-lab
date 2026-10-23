@@ -4,8 +4,8 @@ Django ships `django.utils._os.safe_join`: it joins the base and the
 user-supplied component, resolves the result to an absolute path, and verifies it
 still starts with the base. If `../` sequences or an absolute path escape
 DOCS_ROOT, it raises SuspiciousFileOperation instead of returning a path outside
-the sandbox. We catch it and return a generic 404 — never the resolved path,
-which would confirm the traversal attempt to the attacker.
+the sandbox. We return 404, as for a missing file (a 400 says the check fired);
+catching it skips Django's django.security log, so real code logs it itself.
 
     ?file=../flag.txt   -> safe_join raises SuspiciousFileOperation -> 404
     ?file=/abs/flag.txt -> safe_join raises SuspiciousFileOperation -> 404

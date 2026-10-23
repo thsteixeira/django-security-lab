@@ -150,10 +150,10 @@ jobs:
       #     ModelForm and Lab 10's DRF ModelSerializer alike (07 over-posts a
       #     permission field -> A01; 10 over-posts a business field -> A08).
       #   Lab 09 (path traversal) — miss with a twist: the community
-      #     path-traversal-join rule is registry-only AND its OSS engine follows only
-      #     one variable indirection, missing the realistic two-hop os.path.join->open
-      #     form (Pro-taint territory) — a false green. rules/path_traversal.yaml
-      #     catches realistic code.
+      #     path-traversal-join rule is in none of the curated packs AND its fixed
+      #     shapes miss the realistic two-hop form (its one two-hop shape needs a
+      #     one-argument .get()) — a false green. rules/path_traversal.yaml, an OSS
+      #     taint rule, catches realistic code.
       #   Lab 14 (password reset) — can't-distinguish, the most complete case in the
       #     repo: Bandit 5 findings, none in a view; community packs 2 findings, the
       #     SAME rule on BOTH halves; audit/registry tier 17 findings, every

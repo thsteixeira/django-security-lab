@@ -1,43 +1,36 @@
 # ============================================================================
 # SAST evidence - Semgrep vs Lab 09 (Path Traversal)
 #
-# Tool: Semgrep 1.170.0  |  Captured: 2026-08-11
-#
-# Three findings, empirically reproduced (details + probe files in scans/README.md):
+# Tool: Semgrep 1.170.0  |  Captured: 2026-08-11 (A, B); 2026-10-23 (C, raw)
 #
 #  (A) Curated community packs MISS it - 0 on both views:
 #        semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
 #            labs/post_09_path_traversal/views_vulnerable.py   -> 0 findings
 #            labs/post_09_path_traversal/views_secure.py       -> 0 findings
 #      A Django path-traversal rule EXISTS in the registry
-#      (python.django.security.injection.path-traversal.path-traversal-join) but is
-#      EXCLUDED from the curated packs: the 156-rule curated set finds 0 even on the
-#      one-liner that rule matches directly (same tier exclusion as avoid-mark-safe
-#      / Lab 02 and csrf-exempt / Lab 08). The whole registry (r/python, 371 rules)
-#      is also 0 on the realistic vulnerable view.
+#      (python.django.security.injection.path-traversal.path-traversal-join,
+#      metadata subcategory: audit, confidence: LOW), and none of these packs
+#      includes it: the 156-rule set finds 0 even on the one-liner that rule
+#      matches directly. The whole registry (r/python, 371 rules) is also 0 on
+#      the realistic vulnerable view.
 #
-#  (B) The registry rule, run directly, misses the REALISTIC form. It is a
-#      syntactic pattern-either (not taint); the OSS engine follows only ONE
-#      variable indirection, so it fires on the inlined open(os.path.join(base,
-#      request.GET.get(...))) and single-hop variants, but is SILENT on the two-hop
-#      shape the lab (and the blog post's Vulnerable Pattern 1) actually uses:
-#          name = request.GET.get(...); path = os.path.join(base, name); open(path)
-#      Bridging both hops is Semgrep Pro interprocedural taint, absent from the
-#      community engine.
+#  (B) The registry rule, run directly, misses the REALISTIC form. It is a list
+#      of fixed shapes (pattern-either), not a taint rule, and its only two-hop
+#      shape reads the filename as request.$W.get($X) - ONE argument. The lab
+#      reads it with a default, request.GET.get("file", ""), so the two-hop
+#      shape never matches; a longer chain has no shape at all.
+#      CORRECTION (2026-10-23): this header used to blame the OSS engine for
+#      following "only ONE variable indirection" and called the fix Semgrep Pro
+#      territory. Both were wrong - section (C) shows the same rule FIRING on
+#      a two-hop chain without the default, and the repo's taint rule (run on
+#      the free OSS engine) catching every form.
 #
-#        semgrep scan --config \
-#          r/python.django.security.injection.path-traversal.path-traversal-join \
-#          <probe>                                     inlined one-liner -> 1 finding
-#                                                      two-hop realistic -> 0 findings
-#
-#  (C) The repo's custom rule (rules/path_traversal.yaml) catches the realistic
-#      form the registry rule misses, and is silent on the safe_join fix - the
-#      scan-assert this class otherwise can't have. Asserted in the hermetic
-#      custom-rules CI job.
-#
-#        semgrep scan --config rules/path_traversal.yaml \
-#            labs/post_09_path_traversal/views_vulnerable.py   -> 1 finding
-#            labs/post_09_path_traversal/views_secure.py       -> 0 findings
+#  (C) Raw runs, 2026-10-23: the registry rule on the lab view and four
+#      probes that differ only in how the filename is read; then the repo's
+#      custom rule (rules/path_traversal.yaml, a taint rule) on both views and
+#      its fixture. It fires on the vulnerable view and is silent on the
+#      safe_join fix - the scan-assert this class otherwise can't have.
+#      Asserted in the hermetic custom-rules CI job.
 # ============================================================================
 
 ===== (A) Curated community packs — p/django + p/python + p/owasp-top-ten =====
@@ -62,15 +55,268 @@ SECURE view:      Ran 156 rules on 1 file: 0 findings.
 
 Ran 1 rule on labs/post_09_path_traversal/views_vulnerable.py: 0 findings.
 
+# Note (2026-10-23): the "2 hops" probe file above was not kept. Since the
+# rule's two-hop shape matches a one-argument read (section C), that probe
+# must have read the filename some other way, such as a .get() with a
+# default - the lab view's form. The miss is the read, not the hop count.
 
-===== (C) Custom rule — rules/path_traversal.yaml =====
 
-VULNERABLE view:
+===== (C) Raw runs, 2026-10-23 - registry rule probes and the custom taint rule =====
+$ semgrep scan --metrics=off --config r/python.django.security.injection.path-traversal.path-traversal-join labs/post_09_path_traversal/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+# probe inlined.py:
+#   import os
+#   def v(request):
+#       return open(os.path.join("/srv/docs", request.GET.get("file", "")), "rb").read()
+
+$ semgrep scan --metrics=off --config r/python.django.security.injection.path-traversal.path-traversal-join probes/inlined.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
  • Findings: 1 (1 blocking)
-    rules.thiagoteixeira.django.security.path-traversal.ospath-join-reaches-open
-      A filesystem path built with os.path.join() is passed to open(). ...
-           37┆ data = open(path, "rb").read()
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
 Ran 1 rule on 1 file: 1 finding.
 
-SECURE view (safe_join):
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                     
+    probes\inlined.py
+    ❯❱ python.django.security.injection.path-traversal.path-traversal-join.path-traversal-join
+          ❰❰ Blocking ❱❱
+          Data from request is passed to os.path.join() and to open(). This is a path traversal vulnerability,
+          which can lead to sensitive data being leaked. To mitigate, consider using os.path.abspath or       
+          os.path.realpath or Path library.                                                                   
+          Details: https://sg.run/Dovo                                                                        
+                                                                                                              
+            3┆ return open(os.path.join("/srv/docs", request.GET.get("file", "")), "rb").read()
+
+
+# probe two_hop_one_arg.py:
+#   import os
+#   def v(request):
+#       name = request.GET.get("file")
+#       path = os.path.join("/srv/docs", name)
+#       return open(path, "rb").read()
+
+$ semgrep scan --metrics=off --config r/python.django.security.injection.path-traversal.path-traversal-join probes/two_hop_one_arg.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                             
+    probes\two_hop_one_arg.py
+    ❯❱ python.django.security.injection.path-traversal.path-traversal-join.path-traversal-join
+          ❰❰ Blocking ❱❱
+          Data from request is passed to os.path.join() and to open(). This is a path traversal vulnerability,
+          which can lead to sensitive data being leaked. To mitigate, consider using os.path.abspath or       
+          os.path.realpath or Path library.                                                                   
+          Details: https://sg.run/Dovo                                                                        
+                                                                                                              
+            3┆ name = request.GET.get("file")
+            4┆ path = os.path.join("/srv/docs", name)
+            5┆ return open(path, "rb").read()
+
+
+# probe two_hop_default.py:
+#   import os
+#   def v(request):
+#       name = request.GET.get("file", "")
+#       path = os.path.join("/srv/docs", name)
+#       return open(path, "rb").read()
+
+$ semgrep scan --metrics=off --config r/python.django.security.injection.path-traversal.path-traversal-join probes/two_hop_default.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
 Ran 1 rule on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+# probe three_hop.py:
+#   import os
+#   def v(request):
+#       raw = request.GET.get("file")
+#       name = raw.strip()
+#       path = os.path.join("/srv/docs", name)
+#       return open(path, "rb").read()
+
+$ semgrep scan --metrics=off --config r/python.django.security.injection.path-traversal.path-traversal-join probes/three_hop.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep scan --metrics=off --config rules/path_traversal.yaml labs/post_09_path_traversal/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                                   
+    labs\post_09_path_traversal\views_vulnerable.py
+    ❯❱ rules.thiagoteixeira.django.security.path-traversal.request-data-reaches-open
+          ❰❰ Blocking ❱❱
+          Data from the request reaches a file read - open(), or a path's .open(), .read_bytes() or         
+          .read_text() - without passing through safe_join(). os.path.join and pathlib's / operator do not  
+          contain their result: a '../' segment climbs out of the base directory, and an absolute component 
+          (e.g. '/etc/passwd') discards the base entirely - so the caller can read any file the process can.
+          This is path traversal (CWE-22). Build the path with django.utils._os.safe_join(), which raises   
+          SuspiciousFileOperation when the resolved path escapes the base, or resolve the file through a    
+          FileField / Storage instance instead of a raw path.                                               
+                                                                                                            
+           37┆ data = open(path, "rb").read()
+
+
+$ semgrep scan --metrics=off --config rules/path_traversal.yaml labs/post_09_path_traversal/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep --test --metrics=off --config rules/path_traversal.yaml rules/path_traversal.py
+1/1: ✓ All tests passed
+No tests for fixes found.

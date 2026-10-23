@@ -8,7 +8,7 @@ out of DOCS_ROOT and an absolute path discards the base entirely.
     ?file=../flag.txt   -> reads the off-limits flag one level above documents/
     ?file=/abs/flag.txt -> os.path.join drops DOCS_ROOT and opens the abs path
 
-This is the shape of the post's Vulnerable Pattern 1/2 (MEDIA_ROOT + a filename
+This is the shape of the post's Pattern 1 (MEDIA_ROOT + a filename taken
 from the URL). The secure view (views_secure.py) swaps the join for Django's
 `safe_join`, which raises SuspiciousFileOperation on exactly these payloads.
 

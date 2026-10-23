@@ -53,7 +53,7 @@ labs/post_NN_<topic>/rules/
 | 06 | Broken Access Control / IDOR | [`labs/post_06_idor/`](labs/post_06_idor/) | SAST — the standard tools **miss** owner-unscoped lookups (a semantic authz flaw), so a **custom rule** ([`rules/idor.yaml`](rules/idor.yaml)) catches it, asserted in the same hermetic CI job |
 | 07 | Privilege Escalation (mass assignment) | [`labs/post_07_privesc/`](labs/post_07_privesc/) | SAST — the standard tools **miss** `fields='__all__'` (linter, not SAST, territory), so a **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) catches it, asserted in the same hermetic CI job |
 | 08 | Cross-Site Request Forgery (CSRF) | [`labs/post_08_csrf/`](labs/post_08_csrf/) | SAST — curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule (`no-csrf-exempt`) catches it, so **no custom rule** — asserted in the SAST job |
-| 09 | Path Traversal | [`labs/post_09_path_traversal/`](labs/post_09_path_traversal/) | SAST — Bandit 0/0; the Django community rule is **registry-only** *and* its OSS engine **misses the realistic multi-variable form** (Pro-taint territory), so a **custom rule** ([`rules/path_traversal.yaml`](rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |
+| 09 | Path Traversal | [`labs/post_09_path_traversal/`](labs/post_09_path_traversal/) | SAST — Bandit 0/0; the Django community rule is in **no curated pack** *and* its fixed shapes **miss the realistic multi-variable form**, so a **custom taint rule** ([`rules/path_traversal.yaml`](rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |
 | 10 | Mass Assignment (DRF) | [`labs/post_10_mass_assignment/`](labs/post_10_mass_assignment/) | SAST — the standard tools **miss** `fields='__all__'` (Bandit 0; Semgrep community *and* registry 0), so the **custom rule** ([`rules/mass_assignment.yaml`](rules/mass_assignment.yaml)) — **shared with Lab 07** — catches it on the DRF serializer, asserted in the hermetic CI job |
 | 11 | Brute Force & Credential Stuffing | [`labs/post_11_brute_force/`](labs/post_11_brute_force/) | **No SAST tier finds it** (wrong-key + missing-control) — the gate is `tests.py` and a dynamic `curl` XFF-rotation probe |
 | 12 | Session Hijacking & Fixation | [`labs/post_12_session_fixation/`](labs/post_12_session_fixation/) | **No SAST tier finds it** (an absent `cycle_key()` and a *setting*) — the signal is Django's own **`manage.py check --deploy`** (`security.W012`), plus `tests.py` and a `curl` fixation probe |
@@ -148,14 +148,18 @@ catch it. Several do:
 - **Path traversal (Lab 09)** — the *miss* case with a twist worth knowing: a
   Django rule *does* exist in the Semgrep registry
   (`python.django.security.injection.path-traversal.path-traversal-join`), but it is
-  **excluded from the curated packs** *and*, run directly, its OSS engine follows
-  only one variable indirection — so it misses the realistic two-hop
-  `request → name → os.path.join → path → open` form (the blog post's own vulnerable
-  pattern; bridging both hops needs Semgrep Pro's interprocedural taint). Bandit has
-  no path-traversal plugin at all. So the shipped rule gives *false confidence*, and
+  in **none of the curated packs** *and*, run directly, its fixed shapes miss the
+  realistic two-hop `request → name → os.path.join → path → open` form (the blog
+  post's own vulnerable pattern): its one two-hop shape reads the filename with a
+  one-argument `.get()`, and real views pass a default. Bandit's one
+  path-traversal check, `B202`, covers `tarfile` extraction. So the shipped rule
+  gives *false confidence*, and
   [`rules/path_traversal.yaml`](rules/path_traversal.yaml) supplies the one that
-  catches realistic code — keyed on the `os.path.join → open` hop and silent on the
-  `safe_join` fix.
+  catches realistic code — a taint rule the free OSS engine runs within a function
+  (request data and URL kwargs in; `open()` and `pathlib` reads out; `safe_join`,
+  a record lookup or a raising `is_relative_to()` check on a resolved path as
+  sanitizer), silent on
+  the `safe_join` fix.
 
 **Not every gap needs a custom rule.** **CSRF (Lab 08)** is the counter-example:
 the curated packs miss `@csrf_exempt`, but Semgrep already ships a rule for it in

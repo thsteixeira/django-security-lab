@@ -6,8 +6,8 @@ and capture date.
 
 | File | Tool | Kind | In CI? | What it shows |
 |---|---|---|---|---|
-| [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | — | **0 findings on both views** — Bandit has no path-traversal check |
-| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | SAST | ✅ custom rule asserted (hermetic job) | curated packs miss it; the registry rule misses the *realistic* form; the repo's custom rule catches it |
+| [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | — | **0 findings on both views** — Bandit's one path-traversal check, `B202`, is for `tarfile` |
+| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | SAST | ✅ custom rule asserted (hermetic job) | curated packs miss it; the registry rule misses the *realistic* form (raw probes in section C); the repo's custom taint rule catches it |
 
 ## The standard tools miss this class — and the reason is instructive
 
@@ -17,43 +17,51 @@ the standard tools must catch it. They do not — and *why* is the teaching poin
 ### Bandit — 0/0, structural
 
 Bandit's ~42 plugins are dangerous-**call**/construct checks matched on the AST
-(shell, `eval`, `yaml.load`, `mark_safe`, `ssl`…). None models path traversal,
+(shell, `eval`, `yaml.load`, `mark_safe`, `ssl`…). Its one path-traversal check,
+`B202` (CWE-22), covers `tarfile.extractall`, not a path built from a request,
 and Bandit does no taint/dataflow to connect `request.GET` → `os.path.join` →
-`open`. Its nearest plugin, `B108`, only flags a hardcoded `/tmp` path. So Bandit
-is silent on both the vulnerable and the secure view — no signal at all.
+`open`. So Bandit is silent on both the vulnerable and the secure view — no
+signal at all.
 
-### Semgrep community — the curated packs exclude the rule
+### Semgrep community — no curated pack includes the rule
 
 A Django path-traversal rule **does exist** in the Semgrep registry:
-`python.django.security.injection.path-traversal.path-traversal-join`. But it is
-**excluded from the curated community packs.** Empirically: `p/django` +
+`python.django.security.injection.path-traversal.path-traversal-join` (metadata
+`subcategory: audit`, `confidence: LOW`). But **none of the curated community
+packs includes it.** Empirically: `p/django` +
 `p/python` + `p/owasp-top-ten` (156 rules) report **0 even on the one-liner the
 rule matches directly**, and the whole `r/python` registry (371 rules) is 0 on the
-realistic vulnerable view. This is the same audit/registry-tier exclusion seen in
-Lab 02 (`avoid-mark-safe`) and Lab 08 (`csrf-exempt`).
+realistic vulnerable view. Lab 02 (`avoid-mark-safe`) and Lab 08 (`csrf-exempt`)
+show the same gap.
 
 ### The registry rule, run directly, misses the *realistic* form
 
-This is the real finding. The rule is a **syntactic `pattern-either`** (not
-taint), enumerating fixed shapes plus *single* variable indirections. The
-community (OSS) engine follows **one** variable indirection but not two chained
-ones. Reproduced with one-function probes:
+This is the real finding. The rule is a **`pattern-either` of fixed shapes**
+(not taint). Its only two-hop shape is
+`$V = request.$W.get($X)` … `$P = os.path.join(..., $V, ...)` … `open($P, ...)`,
+and `get($X)` matches a **one-argument** call only. Reproduced with one-function
+probes (the 2026-10-23 rows are raw runs in `semgrep.txt` section C):
 
 | Code shape | `path-traversal-join` |
 |---|---|
 | `open(os.path.join(base, request.GET.get('f')))` — inlined | **1 finding** |
 | `name = request…` → `open(os.path.join(base, name))` — 1 hop | **1 finding** |
 | `path = os.path.join(base, request…)` → `open(path)` — 1 hop | **1 finding** |
-| `name = request…` → `path = os.path.join(base, name)` → `open(path)` — **2 hops** | **0 findings** |
-| the blog post's Vulnerable Pattern 1, verbatim | **0 findings** |
+| `name = request.GET.get('f')` → `path = os.path.join(base, name)` → `open(path)` — 2 hops, one-argument read (2026-10-23) | **1 finding** |
+| `name = request.GET.get('f', '')` → `path = …` → `open(path)` — 2 hops, read with a default (2026-10-23) | **0 findings** |
+| a 3-hop chain (`raw = request…` → `name = raw.strip()` → `path` → `open`) (2026-10-23) | **0 findings** |
+| the blog post's original Pattern 1, verbatim (Aug 11) | **0 findings** |
 
-The two-hop chain is the **post's own Vulnerable Pattern 1** and how real download
-views are written (assign the filename, build the path, `open` the path — usually
-with a default, an `os.path.exists` check, or logging in between). The inlined
-one-liner the rule *does* catch is written rarely, not never. Bridging both hops
-is **Semgrep Pro's interprocedural/interfile taint** — absent from the community
-engine. So an off-the-shelf rule exists that gives **false confidence**: it lights
-up on a toy inline and stays dark on the realistic code.
+The two-hop chain with a default is the **post's own Pattern 1** and how real
+download views are written (assign the filename with a default, build the path,
+`open` the path — often with an `os.path.exists` check or logging in between).
+The inlined one-liner the rule *does* catch is written rarely, not never. This
+README used to put the miss down to the OSS engine following only one variable
+indirection, with Semgrep Pro's taint as the only bridge; **that was wrong**: the
+rule fires on the two-hop chain when the read has one argument, and the free OSS
+engine's intraprocedural taint follows the chain, as the custom rule below shows.
+So an off-the-shelf rule exists that gives **false confidence**: it lights up on
+a toy inline and stays dark on the realistic code.
 
 Because the shipped rule does **not** fire on the realistic vulnerable view,
 §6.4.1's "don't duplicate a rule Semgrep ships" exception (the Lab 08 case) does
@@ -62,23 +70,29 @@ additive.
 
 ## The custom rule — [`rules/path_traversal.yaml`](../../../rules/path_traversal.yaml)
 
-The repo's **fifth custom rule**. It is deliberately syntactic and keyed on the
-`os.path.join` → `open` **single hop the OSS engine handles well**: an `open()`
-whose path argument is — or was assigned — `os.path.join(...)`. It therefore fires
-on the vulnerable view's multi-variable form and is silent on the `safe_join` fix
-(which contains no `os.path.join`).
+The repo's **fifth custom rule**: a **taint rule**, which the free OSS engine runs
+within a function. Sources are anything read from `request` and the parameters
+after `request` in a view's signature (URL kwargs); the sinks are `open()`'s path
+and a path whose `.open()`, `.read_bytes()` or `.read_text()` is called; the
+sanitizers are `safe_join()`, a record lookup (`get_object_or_404`,
+`Model.objects…`) and an `if not p.is_relative_to(base):` check on a
+`p = (…).resolve()` that raises or returns (an unresolved path still fires:
+`is_relative_to()` is lexical). Taint flows through `os.path.join`, pathlib's `/` and plain
+assignments, so it fires on the vulnerable view's multi-variable form (and on
+longer chains, `pathlib` reads, URL kwargs) and is silent on the `safe_join`
+fix, the record lookup, the symlink-aware check and a hardcoded join.
 
 ```bash
 semgrep scan --config rules/path_traversal.yaml labs/post_09_path_traversal/views_vulnerable.py  # 1 finding
 semgrep scan --config rules/path_traversal.yaml labs/post_09_path_traversal/views_secure.py      # 0 findings
 ```
 
-**Known limit** (documented in `rules/path_traversal.py`): being syntactic and
-source-agnostic, it flags an `os.path.join` fed to `open()` even when every
-component is a hardcoded literal (a safe read) — a false positive marked
-`todook`. Confirming the joined path is actually *user-controlled* is exactly the
-taint the OSS engine cannot do, which is the whole reason the class is
-under-served here.
+**Known limits** (documented in `rules/path_traversal.py` and the rule): a name
+the view validates itself in any other shape (a regex allowlist) still fires,
+because Semgrep cannot read the check — a false positive marked `todook`; and
+the OSS engine's taint does not cross functions or files, so a name read in one
+function and opened in another is missed. (The earlier syntactic version of this
+rule had the opposite false positive: it fired on a join of hardcoded literals.)
 
 ## DAST
 
@@ -96,4 +110,6 @@ the command-line-first convention, and the deterministic `tests.py` plus the
 The one-function probes in the table above are trivial to recreate: put each
 snippet in its own `.py` file and run
 `semgrep scan --config r/python.django.security.injection.path-traversal.path-traversal-join <file>`.
-The boundary is consistent — one variable indirection matches, two do not.
+The four 2026-10-23 probes and their raw output are in `semgrep.txt` section C.
+The boundary is the read, not the hop count: a one-argument `.get()` or a
+subscript matches the two-hop shape, a `.get()` with a default does not.

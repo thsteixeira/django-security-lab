@@ -8,8 +8,8 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-22 — Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal') |
-| **ASVS** | V12.3.1 — file paths from user input are validated to stay within the intended directory |
-| **Detection** | SAST — the standard tools **miss** it; the Django community rule is registry-only *and* misses the realistic multi-variable form, so a **custom rule** ([`rules/path_traversal.yaml`](../../rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |
+| **ASVS** | 4.0.3 V12.3.1 — file paths from user input are validated to stay within the intended directory |
+| **Detection** | SAST — the standard tools **miss** it; the Django community rule is in no curated pack *and* misses the realistic multi-variable form, so a **custom taint rule** ([`rules/path_traversal.yaml`](../../rules/path_traversal.yaml)) catches it, asserted in the hermetic CI job |
 
 ## The two views
 
@@ -128,24 +128,35 @@ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/p
 semgrep scan --config rules/path_traversal.yaml labs/post_09_path_traversal/views_vulnerable.py
 ```
 
-- **Bandit** → **0/0 on both views.** It has no path-traversal plugin, and it does
-  no taint to connect `request.GET` → `os.path.join` → `open`.
+- **Bandit** → **0/0 on both views.** Its one path-traversal check, `B202`,
+  covers `tarfile.extractall`, and it does no taint to connect `request.GET` →
+  `os.path.join` → `open`.
 - **Semgrep community** → **0/0.** A Django rule exists —
-  `python.django.security.injection.path-traversal.path-traversal-join` — but it is
-  **excluded from the curated packs** (the curated 156 rules fire 0 even on the
-  one-liner it matches directly; the same tier exclusion as Lab 02 / Lab 08).
-- **The registry rule, run directly, misses the *realistic* form.** It is a
-  syntactic rule, and the OSS engine follows only **one** variable indirection: it
-  fires on `open(os.path.join(base, request.GET.get(...)))` but is silent on the
-  two-hop `name = request…` → `path = os.path.join(base, name)` → `open(path)` — the
-  post's own Vulnerable Pattern 1 and how real download views are written. Bridging
-  both hops is Semgrep Pro's interprocedural taint, absent from the community
-  engine. An off-the-shelf rule exists that gives **false confidence.**
+  `python.django.security.injection.path-traversal.path-traversal-join` (metadata
+  `subcategory: audit`, `confidence: LOW`) — but **none of the curated packs
+  includes it** (the curated 156 rules fire 0 even on the one-liner it matches
+  directly; the same gap as Lab 02 / Lab 08).
+- **The registry rule, run directly, misses the *realistic* form.** It is a list
+  of fixed shapes, not a taint rule, and its only two-hop shape reads the filename
+  as a one-argument `request.GET.get(...)`. This lab reads it with a default,
+  `request.GET.get("file", "")`, so the two-hop `name = request…` →
+  `path = os.path.join(base, name)` → `open(path)` — the post's Pattern 1 and how
+  real download views are written — never matches, and no longer chain does
+  either. (This README used to blame the OSS engine for following only one
+  variable indirection; that was wrong. See [`scans/semgrep.txt`](scans/semgrep.txt).)
+  An off-the-shelf rule exists that gives **false confidence.**
 - **The custom rule** ([`rules/path_traversal.yaml`](../../rules/path_traversal.yaml))
-  catches the realistic form and stays silent on the `safe_join` fix — the
-  scan-assert this class otherwise can't have, enforced in the hermetic CI job. Its
-  one honest limit (a source-agnostic false positive on a hardcoded-name join) is
-  documented as `todook` in `rules/path_traversal.py`.
+  is a taint rule the free OSS engine runs within a function: request data and a
+  view's URL kwargs are sources; `open()` and a path's `.open()`, `.read_bytes()`
+  and `.read_text()` are the sinks; `safe_join()`, a record lookup and an
+  `is_relative_to()` check on a resolved path that raises or returns are the
+  sanitizers. It catches
+  the realistic form (and longer chains, `pathlib` reads, URL kwargs) and stays
+  silent on the `safe_join` fix, the record lookup and the symlink-aware check —
+  the scan-assert this class otherwise can't have, enforced in the hermetic CI
+  job. Its limits — a regex-validated name still fires (`todook` in
+  `rules/path_traversal.py`), and taint does not cross functions — are
+  documented in the rule.
 
 Path traversal is also a **DAST** class — the `curl` walkthrough above is the
 dynamic probe (an OWASP ZAP path-traversal scan or a `../`-fuzz would do the same).

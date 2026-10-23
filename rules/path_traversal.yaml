@@ -1,13 +1,14 @@
 rules:
-  - id: thiagoteixeira.django.security.path-traversal.ospath-join-reaches-open
+  - id: thiagoteixeira.django.security.path-traversal.request-data-reaches-open
     languages: [python]
     severity: WARNING
     message: >-
-      A filesystem path built with os.path.join() is passed to open(). os.path.join
-      does not contain its result: a '../' segment climbs out of the base directory,
-      and an absolute component (e.g. '/etc/passwd') discards the base entirely - so
-      if any component is user-controlled the caller can read any file the process
-      can. This is path traversal (CWE-22). Build the path with
+      Data from the request reaches a file read - open(), or a path's .open(),
+      .read_bytes() or .read_text() - without passing through safe_join().
+      os.path.join and pathlib's / operator do not contain their result: a '../'
+      segment climbs out of the base directory, and an absolute component (e.g.
+      '/etc/passwd') discards the base entirely - so the caller can read any file
+      the process can. This is path traversal (CWE-22). Build the path with
       django.utils._os.safe_join(), which raises SuspiciousFileOperation when the
       resolved path escapes the base, or resolve the file through a FileField /
       Storage instance instead of a raw path.
@@ -18,48 +19,91 @@ rules:
         - "A01:2021 - Broken Access Control"
         - "A01:2025 - Broken Access Control"
       cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
-      asvs: "V12.3.1"
+      asvs: "4.0.3 V12.3.1"
       confidence: MEDIUM
       references:
         - https://thiagoteixeira.tech/blog/path-traversal-how-settings-py-escapes-your-media-directory-and-how-djangos-safe-join-stops-it/
-        - https://semgrep.dev/products/pro-engine/
+        - https://semgrep.dev/docs/writing-rules/data-flow/taint-mode/overview
     # Why this rule exists (and is not just the community rule): a Django
     # path-traversal rule DOES exist in the Semgrep registry
-    # (python.django.security.injection.path-traversal.path-traversal-join), but two
-    # things stop it from giving a usable scan-assert here, both empirically
-    # reproduced (see labs/post_09_path_traversal/scans/README.md):
+    # (python.django.security.injection.path-traversal.path-traversal-join), but
+    # two things stop it from giving a usable scan-assert here, both reproduced
+    # (see labs/post_09_path_traversal/scans/):
     #
-    #   1. It is EXCLUDED from the curated community packs. p/django, p/python and
-    #      p/owasp-top-ten (156 rules) report 0 even on the one-liner the rule
-    #      matches directly - the same audit/registry-tier exclusion as
-    #      avoid-mark-safe (Lab 02) and csrf-exempt (Lab 08).
-    #   2. Run directly it is a syntactic pattern-either, not taint, and the OSS
-    #      engine only follows ONE variable indirection. It fires on the inlined
-    #      open(os.path.join(base, request.GET.get(...))) and on a single-hop
-    #      variable form, but MISSES the realistic two-hop shape -
-    #          name = request.GET.get(...)
+    #   1. None of the curated packs this series runs includes it: p/django,
+    #      p/python and p/owasp-top-ten (156 rules) report 0 even on the one-liner
+    #      it matches directly. Its metadata says subcategory: audit, confidence:
+    #      LOW.
+    #   2. Run directly, it MISSES the realistic two-hop shape
+    #          name = request.GET.get("file", "")
     #          path = os.path.join(base, name)
     #          open(path)
-    #      which is the blog post's own Vulnerable Pattern 1 and how real download
-    #      views are written. Bridging both hops needs Semgrep Pro's interprocedural
-    #      taint, absent from the community engine. (Bandit has no path-traversal
-    #      plugin at all: 0/0 on both views.)
+    #      which is Lab 09's vulnerable view and the post's Pattern 1. It is not
+    #      a taint rule but a list of fixed shapes, and its only two-hop shape
+    #      spells the read `request.$W.get($X)` - one argument - so a .get() with
+    #      a default never matches, and neither does any longer chain. (This repo
+    #      used to blame the OSS engine for following "only one variable
+    #      indirection"; that was wrong. The engine's intraprocedural taint
+    #      follows the chain, as this rule shows.)
     #
-    # This rule is deliberately syntactic and keyed on the join->open SINGLE hop the
-    # OSS engine DOES handle: an open() whose path argument is - or was assigned -
-    # os.path.join(...). It therefore fires on the vulnerable view's multi-variable
-    # form and stays silent on the safe_join fix, which contains no os.path.join.
+    # This rule is a taint rule, which the free OSS engine runs within a
+    # function: anything read from `request`, or a parameter after `request` in
+    # a view's signature, function or class-based method (a URL kwarg such as
+    # <path:filename>), is a source.
+    # The sinks are open()'s path and a path whose .open(), .read_bytes() or
+    # .read_text() is called. The sanitizers are safe_join(), a record lookup
+    # (get_object_or_404, Model.objects...; without it a FileField's
+    # doc.file.open() would fire) and a containment check of the post's shape:
+    # p = (...).resolve(), then `if not p.is_relative_to(base):` ending in raise
+    # or return. The resolve() is required: is_relative_to() is lexical, so an
+    # unresolved base / "../flag.txt" passes it and must still fire. Taint flows
+    # through os.path.join, pathlib's / operator and plain assignments, so the
+    # inlined, two-hop, three-hop and pathlib forms all fire, and the three
+    # fixes and a hardcoded join stay silent.
     #
-    # Known limit (documented in rules/path_traversal.py): being syntactic and
-    # source-agnostic, it flags an os.path.join fed to open() even when every
-    # component is a hardcoded literal (a safe read) - a false positive marked
-    # todook. Confirming the joined path is actually user-controlled is the taint the
-    # OSS engine cannot do, which is the whole reason the class is under-served here.
-    patterns:
-      - pattern-either:
-          - pattern: open(os.path.join(...), ...)
-          - patterns:
-              - pattern: open($P, ...)
+    # Known limits (documented in rules/path_traversal.py): a name the view has
+    # validated itself in any other shape (a regex allowlist, say) still fires -
+    # Semgrep cannot read the check - marked todook; and taint does not cross
+    # functions or files in the OSS engine, so a name read in one function and
+    # opened in another is missed.
+    mode: taint
+    pattern-sources:
+      - pattern: request.$W
+      - patterns:
+          - pattern-either:
               - pattern-inside: |
-                  $P = os.path.join(...)
+                  def $VIEW(request, ..., $ARG, ...):
+                    ...
+              - pattern-inside: |
+                  def $VIEW(self, request, ..., $ARG, ...):
+                    ...
+          - focus-metavariable: $ARG
+    pattern-sanitizers:
+      - pattern: django.utils._os.safe_join(...)
+      - pattern: django.shortcuts.get_object_or_404(...)
+      - pattern: $MODEL.objects.$QUERY(...)
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $C = $X.resolve(...)
                   ...
+                  if not $C.is_relative_to(...):
+                      ...
+                      raise $E
+                  ...
+              - pattern-inside: |
+                  $C = $X.resolve(...)
+                  ...
+                  if not $C.is_relative_to(...):
+                      ...
+                      return $R
+                  ...
+          - pattern: $C
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: open($P, ...)
+              - pattern: $P.open(...)
+              - pattern: $P.read_bytes()
+              - pattern: $P.read_text(...)
+          - focus-metavariable: $P

@@ -4,11 +4,12 @@
 # Command:  bandit -r labs/post_09_path_traversal/views_vulnerable.py \
 #                     labs/post_09_path_traversal/views_secure.py
 # Tool: Bandit 1.9.4  |  Captured: 2026-08-11
-# Result: 0 findings on BOTH views. Bandit has no path-traversal check: its ~42
-#         plugins are dangerous-CALL/construct tests (shell, eval, yaml.load,
-#         mark_safe, ssl...) matched on the AST, and it does no taint/dataflow to
-#         connect request.GET -> os.path.join -> open. The nearest plugin, B108,
-#         only flags a hardcoded /tmp path (hardcoded_tmp_directory) - unrelated.
+# Result: 0 findings on BOTH views. Its one path-traversal check, B202, covers
+#         tarfile.extractall; its ~42 plugins are dangerous-CALL/construct tests
+#         (shell, eval, yaml.load, mark_safe, ssl...) matched on the AST, and it
+#         does no taint/dataflow to connect request.GET -> os.path.join -> open.
+#         (Corrected 2026-10-23: this header used to say Bandit has no
+#         path-traversal check at all.)
 #         So Bandit gives no signal here, on the vulnerable view or the secure one.
 #         This is the class's SAST miss (Bandit half); see scans/README.md.
 # ============================================================================
