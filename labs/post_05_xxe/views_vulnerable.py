@@ -8,9 +8,9 @@ inline the result. The payload
     <order><orderId>&xxe;</orderId></order>
 
 makes the parser read the off-limits flag file and hand it back in `orderId` —
-XML External Entity injection (XXE). Point the entity at http://169.254.169.254/
-instead and the same handler becomes an SSRF proxy to the cloud metadata endpoint
-(here the no-egress `web` container blocks that; the file read still works).
+XML External Entity injection (XXE). An http://169.254.169.254/ entity fetches
+nothing: lxml's no_network=True default still blocks URL loads here, so this
+parser reads files but is no SSRF proxy (with no_network=False as well, it is).
 
 The secure view (views_secure.py) routes the same request through defusedxml,
 which refuses the DTD/entities and raises before any file is read.

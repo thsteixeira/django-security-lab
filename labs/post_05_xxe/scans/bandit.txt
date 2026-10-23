@@ -6,9 +6,9 @@
 # Tool: Bandit 1.9.4  |  Captured: 2026-08-11
 # Result: 0 findings on BOTH views. Bandit's XML checks target the STDLIB parsers
 #         by import/call name — B405/B314 fire on xml.etree(.fromstring),
-#         B313-B320 on minidom/sax/pulldom — and recommend defusedxml. But the
-#         vulnerable view here parses with lxml, and Bandit's lxml check (B410) was
-#         REMOVED: Bandit 1.9.4 reports "Unknown test found in profile: B410" when
+#         B313-B319 on minidom/sax/pulldom — and recommend defusedxml. But the
+#         vulnerable view here parses with lxml, and Bandit's lxml checks (B320,
+#         B410) were REMOVED: Bandit 1.9.4 reports "Unknown test found in profile: B410" when
 #         you ask for it. So Bandit has no rule that flags an lxml parse, and it is
 #         silent on both views. (Confirmation below: the same fromstring on stdlib
 #         xml.etree fires B405 + B314.) See scans/README.md.
@@ -47,8 +47,8 @@ Files skipped (0):
 #      untrusted XML data ... Replace ... with its defusedxml equivalent ...
 #
 # So Bandit flags the parser that modern Python already hardened (stdlib no longer
-# resolves external entities) and is blind to lxml — the parser that still performs
-# the file-read XXE. That inversion is the teaching point.
+# resolves external entities) and is blind to lxml — the parser that performs the
+# file-read XXE once resolve_entities=True is set. That inversion is the teaching point.
 
 # --- Confirmation that B410 (lxml) is gone in 1.9.4 ------------------------
 # $ bandit --tests B410 <any lxml file>

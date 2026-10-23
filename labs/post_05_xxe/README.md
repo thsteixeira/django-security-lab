@@ -8,7 +8,7 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A02:2025 — Security Misconfiguration |
 | **CWE** | CWE-611 (XML External Entity Reference) · CWE-776 (Recursive Entity Expansion) |
-| **ASVS** | V5.5.2 — the XML parser is configured to disable external entity and DTD processing |
+| **ASVS** | 4.0.3 V5.5.2 — the XML parser is configured to disable external entity and DTD processing |
 | **Detection** | SAST — the standard tools **miss** the lxml parse (Bandit's lxml check `B410` was removed; Semgrep community + registry are 0), so a **custom rule** ([`rules/xxe.yaml`](../../rules/xxe.yaml)) flags the lxml footgun, asserted in the hermetic CI job |
 
 ## The two views
@@ -28,7 +28,7 @@ webhook has no legitimate reason to read it; only the external entity does. The
 secure view routes the same body through `defusedxml`, which forbids DTDs and
 entities and raises `EntitiesForbidden` before any file is read.
 
-`defusedxml.ElementTree` is the post's Rule 1 headline fix. (defusedxml also
+`defusedxml.ElementTree` is the post's Pattern 1 fix. (defusedxml also
 shipped an `lxml` shim, but it is **deprecated** and slated for removal, so the
 maintained `ElementTree` shim is the right choice — and the lab uses **lxml** on
 the vulnerable side precisely because modern stdlib ElementTree no longer resolves
@@ -94,11 +94,11 @@ Never parse untrusted XML with a stock parser. Route every parse through
 
 ```python
 import defusedxml.ElementTree as ET
-from defusedxml.common import EntitiesForbidden, DTDForbidden
+from defusedxml import DefusedXmlException
 
 try:
     root = ET.fromstring(request.body)
-except (EntitiesForbidden, DTDForbidden):
+except (DefusedXmlException, ET.ParseError):
     return HttpResponse(status=400)
 ```
 
@@ -111,9 +111,10 @@ expansion (Billion Laughs) is a resource-exhaustion attack.
 
 This lab teaches XXE and nothing else. The `file://` read is confined to files the
 non-root `web` user can read. The `http://169.254.169.254/` **SSRF-to-metadata**
-escalation the post describes is **neutralised by B6**: `web` has no network
-egress, so the external-entity fetch of a URL fails — the file-read variant is the
-one demonstrated here. There is no model; the state under study is the flag file
+escalation does not happen here even before B6: the vulnerable parser keeps lxml's
+`no_network=True` default, which blocks URL fetches although `resolve_entities=True`
+is set. B6 (`web` has no network egress) is the second wall. The file-read variant
+is the one demonstrated here. There is no model; the state under study is the flag file
 the parser reads, so `seed.py` plants a file, not a row (a documented deviation).
 
 ## Scanning it
@@ -132,8 +133,8 @@ semgrep scan --config rules/xxe.yaml labs/post_05_xxe/views_vulnerable.py
   (`B405`/`B314` fire on `xml.etree`), but its lxml check `B410` was **removed**
   (`Unknown test found in profile: B410`). So Bandit is blind to the lxml parse.
   The inversion is the point: the parser Bandit flags (stdlib) is the one modern
-  Python already hardened against the file read; **lxml**, the one that still
-  performs the XXE, is invisible.
+  Python already hardened against the file read; **lxml**, the one that performs
+  the XXE once `resolve_entities=True` is set, is invisible.
 - **Semgrep community** (156 rules) and the full **registry** (`r/python`, 371
   rules) → **0** on the lxml view. The registry's `use-defused-xml-parse` rule
   fires on neither the lxml nor a stdlib `fromstring` probe.

@@ -17,18 +17,18 @@ is — but only on the parser you no longer need to worry about.
 ### Bandit — flags the stdlib, blind to lxml
 
 Bandit's XML plugins are **name-based**: `B405`/`B314` fire on `xml.etree`
-(and `.fromstring`), `B313`–`B320` on `minidom`/`sax`/`pulldom`, each recommending
-`defusedxml`. Confirmed: a stdlib `ET.fromstring(b)` lights up `B405` + `B314`.
+(and `.fromstring`), `B313`–`B319` and `B406`–`B409` on `sax`/`expatbuilder`/
+`minidom`/`pulldom`, each recommending `defusedxml`. Confirmed: a stdlib `ET.fromstring(b)` lights up `B405` + `B314`.
 
-But the lab's vulnerable view parses with **lxml**, and Bandit's lxml check —
-**`B410`** — has been **removed**. Ask for it explicitly and Bandit 1.9.4 answers
+But the lab's vulnerable view parses with **lxml**, and Bandit's lxml checks —
+**`B320`** (calls) and **`B410`** (import) — have been **removed**. Ask for it explicitly and Bandit 1.9.4 answers
 `Unknown test found in profile: B410`. So Bandit has no rule that matches an lxml
 parse and reports **0 on both views**.
 
 The inversion is the teaching point: modern **stdlib** ElementTree no longer
 resolves external entities, so the parser Bandit *does* flag is the one already
 hardened against the file read — while **lxml**, the parser that still performs
-the XXE (with `resolve_entities=True`, or older libxml2 defaults), is the one
+the XXE (with `resolve_entities=True`, or lxml's defaults before 5.0), is the one
 Bandit is blind to. A green Bandit run on XML-parsing code says less than it looks.
 
 *(Bandit's own tracker records that the lxml guidance was unhelpful — the
@@ -50,9 +50,9 @@ lxml XXE.
 
 The repo's **sixth custom rule**. It flags an lxml parse that does not go through
 `defusedxml`: the explicit `etree.XMLParser(resolve_entities=True)` footgun, and a
-bare `etree.fromstring/parse/XML` relying on libxml2's version-dependent defaults.
+bare `etree.fromstring/parse/XML` relying on lxml's version-dependent defaults.
 It stays silent on the `defusedxml.ElementTree` fix and on a hardened lxml parser
-passed via `parser=` (the post's Rule 2).
+passed via `parser=` (the post's Pattern 3 fix).
 
 ```bash
 semgrep scan --config rules/xxe.yaml labs/post_05_xxe/views_vulnerable.py  # 1 finding
@@ -62,6 +62,11 @@ semgrep scan --config rules/xxe.yaml labs/post_05_xxe/views_secure.py      # 0 f
 **Known limits** (documented in `rules/xxe.py`): the rule is **name-based** (keys
 on an `etree` receiver, so `import defusedxml.ElementTree as etree` would be a
 false positive) and **source-agnostic** (it can't prove the bytes are untrusted).
+It trusts **any** `parser=` object, hardened or not, and it is silent (checked with
+Semgrep 1.170.0) on `etree.iterparse(...)` and `etree.ETCompatXMLParser()` — the two
+entry points that resolved external entities by default until lxml 6.1.0
+(CVE-2026-41066) — on `lxml.etree.fromstring(...)` written out in full, and on
+`fromstring` / `XMLParser` imported from `lxml.etree`.
 Confirming reachability from a request body is taint analysis the OSS engine won't
 do here.
 

@@ -8,7 +8,7 @@ never reads a file, fetches a URL, or balloons in memory — it raises at once
 into a 400. A legitimate order document (no entities, no DTD) parses exactly as
 before, so the feature still works.
 
-defusedxml.ElementTree is the post's Rule 1 headline fix. (defusedxml also shipped
+defusedxml.ElementTree is the post's Pattern 1 fix. (defusedxml also shipped
 an lxml shim, but it is deprecated and slated for removal, so the maintained
 ElementTree shim is the right choice.)
 """
@@ -34,8 +34,9 @@ def webhook(request):
     # billion-laughs payload raises instead of executing. Legit XML is unaffected.
     try:
         root = defused_etree.fromstring(request.body)
-    except (EntitiesForbidden, DTDForbidden, ExternalReferenceForbidden):
-        return HttpResponse("Rejected: XML entities/DTDs are not allowed", status=400)
+    except (EntitiesForbidden, DTDForbidden, ExternalReferenceForbidden,
+            defused_etree.ParseError):
+        return HttpResponse("Rejected: not an acceptable XML document", status=400)
 
     order_id = root.findtext(".//orderId") or ""
     return JsonResponse({"received": order_id})

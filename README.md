@@ -131,7 +131,7 @@ catch it. Several do:
   the **stdlib** parsers (`B405`/`B314`) but its lxml check `B410` was removed, so
   it's 0/0 on the lxml view; Semgrep community and the full registry are 0 too. The
   parser the tools catch is the one modern Python already hardened; **lxml**, the
-  one that still performs the file read, is invisible — so
+  one that performs the file read once `resolve_entities=True` is set, is invisible — so
   [`rules/xxe.yaml`](rules/xxe.yaml) flags the lxml footgun and stays silent on the
   `defusedxml` fix.
 - **IDOR (Lab 06)** — the *miss* case again, for a deeper reason: it's a semantic
