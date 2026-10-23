@@ -9,7 +9,8 @@ the exact command, tool version, and capture date.
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ⚠️ scanned, not asserted | nothing on the views — no `@csrf_exempt` check; only `B106` noise on the test password |
 | [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`, `p/python`, `p/owasp-top-ten`) | SAST | ⚠️ scanned, not asserted | **0 findings** on both views — the curated packs exclude the `@csrf_exempt` rule |
-| [`semgrep-audit-rule.txt`](semgrep-audit-rule.txt) | Semgrep 1.170.0 (`r/python.django…audit.csrf-exempt`) | SAST | ✅ asserted | the **audit-tier** rule fires on the vulnerable view (`@csrf_exempt`), **silent** on the secure one |
+| [`samesite-browser.txt`](samesite-browser.txt) | Chrome 155 headless, against a stand-in view | browser | ❌ not in CI | the forged POST arrives **without** the `SameSite=Lax` session from `file://` and `localhost` (cross-site), **with** it from `127.0.0.1` on another port (same site) |
+| [`semgrep-audit-rule.txt`](semgrep-audit-rule.txt) | Semgrep 1.170.0 (`r/python.django…audit.csrf-exempt`; + `p/security-audit`) | SAST | ✅ asserted (the named rule) | the **audit-tier** rule fires on the vulnerable view (`@csrf_exempt`), **silent** on the secure one; `p/security-audit` gives the same pair |
 
 ## The tool ships the rule — but in the audit tier the default pack skips
 
@@ -22,11 +23,13 @@ only thing it flags in the module is a `B106` hardcoded password in the *test*
 file (`labpass`), noise unrelated to the class.
 
 **Semgrep's curated community packs** (`p/django`, `p/python`, `p/owasp-top-ten`)
-report **0 findings on both views**. But the rule *exists* — it lives in the
-**`audit` subcategory**, which the curated packs deliberately exclude to keep
-signal-to-noise high (`@csrf_exempt` is a legitimate, deliberate choice on
-webhook receivers and some APIs, so a tool can't call every use a bug). Run the
-audit/registry tier and it appears:
+report **0 findings on both views**. But the rule *exists* — it lives among
+Semgrep's `security/audit` rules (its metadata says `subcategory: vuln`,
+`confidence: LOW`; `@csrf_exempt` is a legitimate, deliberate choice on webhook
+receivers and some APIs, so a tool can't call every use a bug), and none of the
+three packs includes it. Run it by name, or through the
+`p/security-audit` pack (79 rules on each view; the same one finding on the
+vulnerable view, none on the secure one), and it appears:
 
 ```bash
 # curated packs — MISS it (audit rules excluded)
@@ -37,7 +40,11 @@ semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_cs
 semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_csrf/views_secure.py      # 0 findings (@csrf_protect)
 ```
 
-The rule is `python.django.security.audit.csrf-exempt.no-csrf-exempt`. Because it
+The rule is `python.django.security.audit.csrf-exempt.no-csrf-exempt`. It matches
+the decorator only on a function: `@method_decorator(csrf_exempt, ...)` on a
+class-based view and `csrf_exempt(view)` in a `urls.py` pass it silently
+(Semgrep 1.170.0, Oct 23, 2026), so a `grep` for `csrf_exempt` stays the first
+check. Because it
 fires on the vulnerable view and stays **silent** on the `@csrf_protect` secure
 view, it gives a clean vulnerable-fires / secure-silent assert on its own — so
 writing a custom rule would just duplicate a rule Semgrep already ships (§6.4.1).
@@ -51,25 +58,23 @@ distinguishes cleanly.)
 
 ## Why there is no captured DAST run here
 
-CSRF is a listed DAST class, and OWASP ZAP has a rule for it — **Absence of
-Anti-CSRF Tokens** flags a state-changing form carrying no token. This directory
-still ships **no captured ZAP run**, for two honest reasons:
+CSRF is a listed DAST class, and OWASP ZAP has a passive rule for it — **Absence
+of Anti-CSRF Tokens** flags a form carrying no token field. This directory ships
+**no captured ZAP run**, for two honest reasons:
 
 1. **The form is auth-gated.** The transfer view is behind `@login_required`, so
    an unauthenticated ZAP spider/baseline is redirected to login and never
    reaches it. A faithful run needs an *authenticated* ZAP context (a login
    script + session handling) — more setup than this finding earns, and beyond
    what a reader can reproduce with one command.
-2. **What ZAP reports is a server fact, not an exploit.** Its finding would be
-   *"this endpoint has no anti-CSRF token,"* a statement about the **server** —
-   not proof a drive-by attack lands. Django's `csrftoken`/`sessionid` cookies
-   default to `SameSite=Lax`, so a modern browser will not attach them to the
-   attacker's cross-site POST in the first place; the browser may block the
-   forgery *before* Django's token check would. That is defence in depth, not a
-   lab defect.
+2. **That rule would not fire here.** Both views render the same form, and it
+   carries a `csrfmiddlewaretoken` field (`_transfer.py` calls `get_token()`);
+   the vulnerable view simply never checks it. A passive scan sees a token and
+   stays quiet. What proves the gap is a request sent *without* the token, which
+   is what `tests.py` does. (Django's `SameSite=Lax` cookies also stop the
+   cross-site version in a browser; see [`samesite-browser.txt`](samesite-browser.txt).)
 
 So DAST here is **deferred with a reason** (as in the stored-XSS and SSTI labs),
 not captured. The server-side lesson (`@csrf_protect` rejects the tokenless POST
 with `403`) stands regardless, and `tests.py` proves it deterministically with
-`Client(enforce_csrf_checks=True)`. To see ZAP flag it yourself, point an
-authenticated scan at the booted lab.
+`Client(enforce_csrf_checks=True)`.

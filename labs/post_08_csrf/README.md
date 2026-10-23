@@ -7,7 +7,7 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-352 — Cross-Site Request Forgery |
-| **ASVS** | V4.2.2 — verify anti-CSRF defences on state-changing operations |
+| **ASVS** | 4.0.3 V4.2.2 — verify anti-CSRF defences on state-changing operations |
 | **Detection** | SAST — the curated packs **miss** `@csrf_exempt`; Semgrep's own **audit-tier** rule catches it (no custom rule needed), asserted in CI (see Scanning it) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
@@ -88,9 +88,20 @@ docker compose run --rm web python manage.py test labs.post_08_csrf
 
 ## The browser walkthrough (the real cross-site demo)
 
-`curl` shows the server side; to see the *cross-site* mechanic, save this as
-`evil.html` anywhere and open it in a browser where you are logged in as `alice`
-at `127.0.0.1:8000`:
+`curl` shows the server side; to see the *cross-site* mechanic you need two
+pages in an empty folder. `/accounts/login/` takes only a POST (it has no form),
+so the first one logs the browser in. Save it as `login.html`:
+
+```html
+<!-- login.html — logs this browser in as alice (the victim) -->
+<form action="http://127.0.0.1:8000/accounts/login/" method="POST">
+  <input name="username" value="alice">
+  <input name="password" value="labpass">
+  <button type="submit">Log in as alice</button>
+</form>
+```
+
+and save the attacker's page beside it as `evil.html`:
 
 ```html
 <!-- evil.html — the attacker's auto-submitting page -->
@@ -101,17 +112,32 @@ at `127.0.0.1:8000`:
 </body>
 ```
 
+Serve the folder from the same host on another port, log in, then open the
+attacker's page:
+
+```bash
+python -m http.server 8001 --bind 127.0.0.1    # in the folder holding both pages
+# open http://127.0.0.1:8001/login.html and click the button ("logged in as alice")
+# then open http://127.0.0.1:8001/evil.html
+```
+
 The page submits on load; the browser attaches alice's session cookie
 automatically; the vulnerable endpoint accepts it and the flag moves — the victim
 sees nothing. Point the same form at `/csrf/secure/transfer/` and it gets a `403`.
 
 > **SameSite caveat (read this).** Django's `sessionid`/`csrftoken` cookies
-> default to `SameSite=Lax`, so a modern browser may **not** attach them to this
-> cross-site POST at all — the browser can block the forgery *before* Django's
-> token check would. That is defence in depth, not a lab defect: "your browser
-> may block this before Django does." The server-side lesson (the secure view
-> rejects the tokenless POST with `403`) holds regardless, which is why `tests.py`
-> uses `Client(enforce_csrf_checks=True)` to prove it deterministically.
+> default to `SameSite=Lax`, which a browser withholds from a cross-site POST.
+> Port 8001 is a different *origin* from 8000 but the same *site* (scheme plus
+> host; the port does not count), so the cookie still rides along. Open
+> `evil.html` straight from disk (`file://`) or from `http://localhost:8001/`
+> instead and the page is cross-site: the POST arrives without a session and
+> `@login_required` redirects it to the login page, so nothing moves. A headless
+> Chrome 155 run against a stand-in for this view showed all three outcomes,
+> logging in through a `login.html` first: transcript, stand-in and pages are in
+> [`scans/samesite-browser.txt`](scans/samesite-browser.txt). That is SameSite
+> doing its job, defence in depth rather than a lab defect. The server-side lesson (the secure view rejects the tokenless POST with
+> `403`) holds regardless, which is why `tests.py` uses
+> `Client(enforce_csrf_checks=True)` to prove it deterministically.
 
 ## The fix
 
@@ -140,7 +166,8 @@ above), which is why the contrast is drawn with `@csrf_protect`.
 The standard SAST tools an analyst runs by default **miss** this. Bandit has no
 `@csrf_exempt` check (only a `B106` false alarm on the test password). Semgrep's
 curated packs (`p/django`, `p/python`, `p/owasp-top-ten`) report **0 on both
-views** — but the rule *exists*, in the **audit tier** the curated packs exclude:
+views** — but the rule *exists*, in the **audit tier**, which none of the three
+packs includes (`p/security-audit` does):
 
 ```bash
 # curated packs — miss it
@@ -151,6 +178,11 @@ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/p
 semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_csrf/views_vulnerable.py  # 1 finding (@csrf_exempt)
 semgrep scan --config r/python.django.security.audit.csrf-exempt labs/post_08_csrf/views_secure.py      # 0 findings (@csrf_protect)
 ```
+
+The rule matches `@csrf_exempt` only as a decorator on a function:
+`@method_decorator(csrf_exempt, ...)` on a class-based view and
+`csrf_exempt(view)` in a `urls.py` pass it silently (checked with Semgrep
+1.170.0, Oct 23, 2026), so `grep -rn csrf_exempt` stays the first check.
 
 So there is **no custom rule** here — Semgrep already ships one
 (`python.django.security.audit.csrf-exempt.no-csrf-exempt`); the lesson is

