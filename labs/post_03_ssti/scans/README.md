@@ -24,7 +24,7 @@ on the AST; it has plugins for `mark_safe` (`B308`), Jinja2 `autoescape=False`
 compiled from user input matches no rule, so it is reported as clean — a miss,
 not a pass.
 
-**Semgrep's community rules report nothing either** (0/0, 156 Python rules run).
+**Semgrep's community rules report nothing either** (0/0, 156 rules run: 151 Python, 5 multilang).
 The free packs an analyst actually runs (`p/django`, `p/python`,
 `p/owasp-top-ten`) centre their Django coverage on the autoescape/`mark_safe`
 (XSS) side and ship **no rule for the `Template(user_input)` sink**. Semgrep

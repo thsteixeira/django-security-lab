@@ -133,7 +133,7 @@ run here); and input arrives by GET with no form, so it does not drift into CSRF
 
 The standard SAST tools **miss this class entirely** — Bandit reports **0
 findings** (it has no plugin for the `Template()` sink) and the Semgrep community
-packs report **0 findings** too (156 Python rules, none covering this Django
+packs report **0 findings** too (156 rules, 151 of them Python, none covering this Django
 sink). Neither fires on the vulnerable view, so there is no scan-assert to be had
 without a rule of our own. That is the §6.4.1 case where a **custom rule** earns
 its place: [`rules/ssti.yaml`](../../rules/ssti.yaml), with its stem-paired

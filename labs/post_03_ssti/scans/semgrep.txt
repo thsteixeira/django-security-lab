@@ -8,7 +8,7 @@
 #           labs/post_03_ssti/views_secure.py
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-07-26
-# Result: 0 findings on BOTH views (156 Python community rules run). The
+# Result: 0 findings on BOTH views (156 community rules run: 151 Python, 5 multilang). The
 #         community packs ship no rule for the django.template.Template() /
 #         Engine.from_string() sink - a MISS, the same gap Bandit has. See
 #         scans/README.md.
