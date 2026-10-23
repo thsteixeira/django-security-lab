@@ -47,14 +47,12 @@ def formatted_user_format_string(request):
 
 def joined_literal(comments):
     # ok: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
-    return mark_safe(format_html_join("
-", "<li>{}</li>", ((c.body,) for c in comments)))
+    return mark_safe(format_html_join("\n", "<li>{}</li>", ((c.body,) for c in comments)))
 
 
 def joined_user_format_string(request, comments):
     # ruleid: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
-    return mark_safe(format_html_join("
-", request.GET["fmt"], ((c.body,) for c in comments)))
+    return mark_safe(format_html_join("\n", request.GET["fmt"], ((c.body,) for c in comments)))
 
 
 def indirect_vulnerable(comment):
