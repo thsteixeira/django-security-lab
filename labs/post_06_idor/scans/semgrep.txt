@@ -8,8 +8,9 @@
 #           labs/post_06_idor/views_secure.py
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-07-27
-# Result: 0 findings on BOTH views (156 Python community rules run). The packs
-#         ship no rule for owner-unscoped object lookups. Semgrep's own docs say
+# Result: 0 findings on BOTH views (156 community rules run: 151 Python, 5
+#         multilang). The packs ship no rule for owner-unscoped object lookups.
+#         Semgrep's own docs say
 #         why: IDOR "is closer to a logic flaw: it's the absence of an
 #         authorization check at the right point in the request flow," so the
 #         advice is to "write custom rules for your application that describe the

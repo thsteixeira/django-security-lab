@@ -29,7 +29,8 @@ noise unrelated to the class, and a test literal rather than a real secret. A
 clean report on genuinely vulnerable views is a **miss**, not a pass — and
 triaging that lone false alarm to nothing is itself the analyst's job.
 
-**Semgrep's community rules report nothing either** (0/0, 156 Python rules). The
+**Semgrep's community rules report nothing either** (0/0, 156 rules: 151
+Python, 5 multilang). The
 packs an analyst actually runs (`p/django`, `p/python`, `p/owasp-top-ten`) ship
 **no rule for owner-unscoped object lookups** — and neither does the
 **audit/registry tier** (checked with `semgrep --config r/python.django --config
@@ -67,18 +68,20 @@ The rule is deliberately **syntactic**: it flags `get_object_or_404` /
 `get_list_or_404` calls that carry no `owner=`/`user=` scoping kwarg, and goes
 silent once one is present — so it fires on the vulnerable view and not on the
 owner-scoped fix. Taint mode does not help here: there is no dangerous data flow
-to trace, only a *missing predicate*. Its two honest limits are documented in the
-fixture: a lookup scoped by an app-specific field name it doesn't know
-(`account=request.user`) is a false positive (`# todook`), and a raw
-`Model.objects.get(pk=...)` — the same bug outside the shortcut — slips past it
-(`# todoruleid`). Checked with Semgrep 1.170.0, it also flags lookups scoped
-another way (a related manager, `get_object_or_404(request.user.notes, pk=pk)`, or
-a pre-filtered queryset) and lookups of objects nobody owns (a published post by
-slug), and **any** `owner=`/`user=` kwarg silences it whatever its value, so
-`user=request.GET["uid"]` passes. Nor does it see an unscoped DRF queryset
-(`queryset = Document.objects.all()`, the post's Pattern 2): there is no shortcut
-call to match. A finding means "check who should reach this object", not a
-verdict.
+to trace, only a *missing predicate*. Each of its limits is a line in the
+fixture. It flags lookups scoped in a way it doesn't recognise — an app-specific
+field (`account=request.user`), a related manager
+(`get_object_or_404(request.user.notes, pk=pk)`) or a pre-filtered queryset — and
+lookups of objects nobody owns (a published post by slug): false positives
+(`# todook`). It misses the same bug outside the shortcuts — a raw
+`Model.objects.get(pk=...)`, or an unscoped DRF queryset
+(`queryset = Document.objects.all()`, the post's Pattern 2) — and **any**
+`owner=`/`user=` kwarg silences it whatever its value, so
+`user=request.GET["uid"]` passes (`# todoruleid`). `semgrep --test` does not
+enforce `todo` annotations, so a JSON scan of the fixture is what confirms them:
+`semgrep scan --json --config rules/idor.yaml rules/idor.py` matches under every
+`ruleid` and `todook` annotation and nowhere else. A finding means "check who
+should reach this object", not a verdict.
 
 ## Why no DAST here
 

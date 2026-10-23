@@ -121,8 +121,10 @@ note = get_object_or_404(Note, pk=pk, owner=request.user)
 ```
 
 For richer rules than a single `owner` FK (team-shared objects, role-based
-access), express the check with a scoped queryset or `UserPassesTestMixin` — see
-the post. UUID primary keys raise the bar for enumeration but are **not** the
+access), express them as a `Q` filter in the scoped queryset (`get_queryset()` in
+a class-based view) rather than loading the object in
+`UserPassesTestMixin.test_func()`, which answers 403 for a record that exists and
+404 for one that does not — see the post. UUID primary keys raise the bar for enumeration but are **not** the
 control: a leaked UUID still works without the ownership scope. The invariant:
 **scope every lookup to the requester.**
 
@@ -138,11 +140,11 @@ privilege escalation (Post 7).
 
 The standard SAST tools **miss this class** — and for a deeper reason than a
 missing plugin. Bandit reports **0 findings on the views**: its 42 plugin tests
-are all dangerous-*call* checks (shell, `eval`, `mark_safe`, `yaml.load`…), none
+are all dangerous-call/construct checks (shell, `eval`, `mark_safe`, `yaml.load`…), none
 models authorization, so an unscoped `get_object_or_404()` matches nothing. The
 only thing it flags in the module is a `B106` hardcoded-password on the *test*
 password — noise unrelated to the class. The Semgrep community packs report **0
-findings** too (156 Python rules). Semgrep's own docs explain why, and it doubles
+findings** too (156 rules: 151 Python, 5 multilang). Semgrep's own docs explain why, and it doubles
 as the justification for a custom rule: IDOR "is closer to a logic flaw: it's the
 absence of an authorization check at the right point in the request flow," so the
 advice is to "write custom rules for your application that describe the access
