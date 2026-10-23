@@ -3,11 +3,18 @@
 
 It mirrors Lab 03's two views: compiling a Template from user input is the bug;
 passing user input as context data to a fixed-literal template is the fix. The
-Jinja2 from_string() variant is the Pattern 2 (RCE) case from the post. The
-indirect case documents the rule's best-known limit — being syntactic, it cannot
-see that a variable holds a literal (a false positive marked todook).
+Jinja2 from_string() variant is the Pattern 2 (RCE) case from the post. A
+literal held in a variable is cleared by Semgrep's constant propagation (ok).
+The two todook cases are the rule's false positives: a template file the
+project ships, safe for a reason outside the code, and the post's sandboxed
+Jinja2 fix, whose environment the rule cannot see.
 """
+from pathlib import Path
+
 from django.template import Context, Template, engines
+from jinja2.sandbox import SandboxedEnvironment
+
+_sandbox = SandboxedEnvironment(autoescape=True)
 
 
 def vulnerable(request):
@@ -37,8 +44,23 @@ def secure_jinja_literal(request):
 
 
 def indirect_literal():
-    # A fixed literal held in a variable. The rule SHOULD treat this as safe but
-    # cannot (it is syntactic) - a known false positive, hence todook.
+    # A fixed literal held in a variable: constant propagation sees the literal.
     tpl = "{{ value }}"
-    # todook: thiagoteixeira.django.security.ssti.template-from-user-input
+    # ok: thiagoteixeira.django.security.ssti.template-from-user-input
     return Template(tpl).render(Context({"value": "x"}))
+
+
+def shipped_file():
+    # A template file from the project's own repository. Safe, but the rule
+    # cannot know who controls the file - a known false positive, hence todook.
+    source = Path(__file__).with_name("greeting.txt").read_text()
+    # todook: thiagoteixeira.django.security.ssti.template-from-user-input
+    return Template(source).render(Context({"value": "x"}))
+
+
+def sandboxed_jinja(request):
+    # The post's Pattern 2 fix. The rule cannot tell _sandbox from a plain
+    # Environment - a known false positive, hence todook.
+    body = request.POST.get("body", "")
+    # todook: thiagoteixeira.django.security.ssti.template-from-user-input
+    return _sandbox.from_string(body).render({"user_name": "x"})

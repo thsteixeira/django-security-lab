@@ -32,9 +32,11 @@ rules:
     # Template(user_input) and goes silent on the fix, Template("{{ value }}"),
     # whose source is a literal the developer controls.
     #
-    # Known limit (documented in rules/ssti.py): being syntactic, it cannot see
-    # that a variable holds a literal - `t = "{{ v }}"; Template(t)` is a false
-    # positive. It also matches only the call shapes it names:
+    # Known limits (documented in rules/ssti.py): being syntactic, it never
+    # traces where a non-literal came from. Constant propagation does clear a
+    # literal held in a variable (`t = "{{ v }}"; Template(t)` is silent), but a
+    # template file the project ships, read with Path(...).read_text(), is a
+    # false positive. It also matches only the call shapes it names:
     # Template(t, engine=e), Template(template_string=t) and template.Template(t)
     # slip past Template($X). And it cannot tell a sandboxed Jinja2 environment
     # from a plain one: `_sandbox.from_string(body)` - the post's Pattern 2 fix -

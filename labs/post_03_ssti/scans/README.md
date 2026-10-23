@@ -33,7 +33,7 @@ equivalent. And this is not just the curated packs: the **audit/registry tier**
 was checked too (`semgrep --config r/python.django --config r/python`) and it
 has **no** Django `Template()`/SSTI rule either — only an unrelated
 `audit.xss.direct-use-of-httpresponse` style nit fires. So a custom rule is
-genuinely warranted; Semgrep ships nothing for this sink in any tier.
+genuinely warranted; the public community rules have nothing for this sink.
 
 That is the §6.4.1 case: the standard tools **miss a genuinely Django-specific
 pattern**, so a **custom rule** earns its place —
@@ -56,9 +56,12 @@ semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_vulnerable.py   # 
 semgrep scan --config rules/ssti.yaml labs/post_03_ssti/views_secure.py       # 0 findings
 ```
 
-The rule's best-known limit — being syntactic, it cannot see that a variable
-holds a literal (`t = "{{ v }}"; Template(t)`) — is documented in the fixture as
-`todook`. It also matches only the call shapes it names: `Template(t, engine=e)`,
+Being syntactic, the rule never traces where a non-literal came from. Semgrep's
+constant propagation still clears a literal held in a variable
+(`t = "{{ v }}"; Template(t)` is silent, an `ok` case in the fixture), but a
+template file the project ships, read with `Path(...).read_text()`, is a false
+positive, documented in the fixture as `todook` (checked with Semgrep 1.170.0 on
+2026-10-23). It also matches only the call shapes it names: `Template(t, engine=e)`,
 `Template(template_string=t)` and `template.Template(t)` slip past
 `Template($X)` (checked with Semgrep 1.170.0 on 2026-10-22). And it cannot
 tell a sandboxed Jinja2 environment from a plain one: `_sandbox.from_string(body)`,
