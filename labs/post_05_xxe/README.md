@@ -19,14 +19,14 @@ echoes the order id back.
 | View | File | What it does |
 |---|---|---|
 | Vulnerable | [`views_vulnerable.py`](views_vulnerable.py) | `lxml.etree.fromstring(request.body, parser=etree.XMLParser(resolve_entities=True))` |
-| Secure | [`views_secure.py`](views_secure.py) | `defusedxml.ElementTree.fromstring(request.body)` → 400 on any DTD/entity |
+| Secure | [`views_secure.py`](views_secure.py) | `defusedxml.ElementTree.fromstring(request.body)` → 400 on any entity declaration |
 
 The vulnerable parser resolves entities, so a document that declares an external
 entity pointing at a `file://` URI makes the parser read that file and inline it
 into `orderId`. The flag lives in `flag.txt` under the system temp dir — the
 webhook has no legitimate reason to read it; only the external entity does. The
-secure view routes the same body through `defusedxml`, which forbids DTDs and
-entities and raises `EntitiesForbidden` before any file is read.
+secure view routes the same body through `defusedxml`, which forbids entity
+declarations and raises `EntitiesForbidden` before any file is read.
 
 `defusedxml.ElementTree` is the post's Pattern 1 fix. (defusedxml also
 shipped an `lxml` shim, but it is **deprecated** and slated for removal, so the
@@ -90,7 +90,7 @@ docker compose run --rm web python manage.py test labs.post_05_xxe
 ## The fix
 
 Never parse untrusted XML with a stock parser. Route every parse through
-`defusedxml`, which forbids DTDs and entity resolution by default:
+`defusedxml`, which forbids entity declarations and external references by default:
 
 ```python
 import defusedxml.ElementTree as ET

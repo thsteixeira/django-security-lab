@@ -5,10 +5,10 @@ rules:
     message: >-
       Untrusted XML is being parsed with lxml (etree) rather than defusedxml. Either
       it turns entity resolution on explicitly (resolve_entities=True → XXE: a
-      file:// external entity reads local files, an http:// one becomes SSRF to the
-      cloud metadata endpoint), or it relies on lxml's version-dependent defaults,
-      which is fragile. Route the parse through defusedxml.ElementTree (forbids DTDs
-      and entities), or build a hardened lxml parser (resolve_entities=False,
+      file:// external entity reads local files and, with no_network=False as well,
+      an http:// one is SSRF), or it relies on lxml's version-dependent defaults,
+      which is fragile. Route the parse through defusedxml.ElementTree (forbids entity
+      declarations and external references), or build a hardened lxml parser (resolve_entities=False,
       no_network=True, load_dtd=False).
     metadata:
       # dual-listed: rule metadata is machine-read, and the Semgrep registry
@@ -37,22 +37,31 @@ rules:
     # flag is the already-hardened one).
     #
     # It fires on the explicit footgun (resolve_entities=True) and on a bare lxml
-    # parse relying on implicit defaults, and is silent when the parse goes through
-    # defusedxml or a parser= object (the post's Pattern 3 hardened-parser fix).
+    # parse relying on implicit defaults - any etree.fromstring/parse/XML call that
+    # passes no parser, positionally or as parser=, whatever other keywords it
+    # passes (base_url=...) - and is silent when the parse goes through defusedxml
+    # or is handed a parser (the post's Pattern 3 hardened-parser fix).
     #
     # Known limits (documented in rules/xxe.py): it is name-based (keys on an `etree`
-    # receiver, so `import defusedxml.ElementTree as etree` would be a false positive),
+    # receiver, so `import defusedxml.ElementTree as etree` is a false positive, todook
+    # in the fixture),
     # and source-agnostic (it cannot confirm the bytes are actually untrusted). A
     # bare hardened parser passed via parser= is correctly not flagged — but so is
     # ANY parser= object, hardened or not. Silent too, checked with Semgrep 1.170.0:
     # etree.iterparse(...) and etree.ETCompatXMLParser(), which resolved external
     # entities by default until lxml 6.1.0 (CVE-2026-41066); lxml.etree.fromstring(...)
     # written out in full; and fromstring / XMLParser imported from lxml.etree. A
-    # bare etree.fromstring(x) is flagged although lxml >= 5.0 does not resolve
-    # external entities there — deliberately, as a version-dependent default.
+    # bare etree.fromstring(x) is flagged although lxml >= 6.1.3 loads no external
+    # entity there (5.0 to 6.1.2 still loaded external parameter entities) —
+    # deliberately, as a version-dependent default.
     patterns:
       - pattern-either:
           - pattern: etree.XMLParser(..., resolve_entities=True, ...)
-          - pattern: etree.fromstring($X)
-          - pattern: etree.parse($X)
-          - pattern: etree.XML($X)
+          - patterns:
+              - pattern-either:
+                  - pattern: etree.fromstring($X, ...)
+                  - pattern: etree.parse($X, ...)
+                  - pattern: etree.XML($X, ...)
+              # a parser handed over, positionally or by keyword, is trusted
+              - pattern-not: etree.$FN($X, $PARSER, ...)
+              - pattern-not: etree.$FN(..., parser=$PARSER, ...)

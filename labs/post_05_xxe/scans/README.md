@@ -1,8 +1,9 @@
 # Captured scan evidence — Lab 05 (XXE)
 
-These are the **real, unedited scanner runs** behind the post's detection
-section. Each file starts with a header giving the exact command, tool version,
-and capture date.
+These are the **real scanner runs** behind the post's detection section:
+`bandit.txt` holds the full Bandit run, and `semgrep.txt` keeps each Semgrep
+run's result lines. Each file starts with a header giving the exact command,
+tool version, and capture date.
 
 | File | Tool | Kind | In CI? | What it shows |
 |---|---|---|---|---|
@@ -50,7 +51,8 @@ lxml XXE.
 
 The repo's **sixth custom rule**. It flags an lxml parse that does not go through
 `defusedxml`: the explicit `etree.XMLParser(resolve_entities=True)` footgun, and a
-bare `etree.fromstring/parse/XML` relying on lxml's version-dependent defaults.
+bare `etree.fromstring/parse/XML` that passes no parser, positionally or as
+`parser=`, and so relies on lxml's version-dependent defaults.
 It stays silent on the `defusedxml.ElementTree` fix and on a hardened lxml parser
 passed via `parser=` (the post's Pattern 3 fix).
 
@@ -84,6 +86,7 @@ DAST here, it would not run in CI.
 ## A note on containment
 
 The `file://` read is confined to files the non-root `web` user can read. The
-`http://169.254.169.254/` SSRF-to-metadata escalation the post describes is
-**neutralised by B6**: `web` has no network egress, so the external-entity fetch
-of a URL fails. The file-read variant is the one this lab demonstrates.
+`http://169.254.169.254/` SSRF-to-metadata escalation the post describes does
+not happen here: the vulnerable parser keeps lxml's `no_network=True` default,
+which blocks URL fetches although `resolve_entities=True` is set. B6 (`web` has
+no network egress) is the second wall. The file-read variant is the one this lab demonstrates.

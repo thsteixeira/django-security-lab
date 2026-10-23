@@ -9,7 +9,7 @@ read through a file:// URI. Run inside the Docker stack:
 
 The file-read payload declares an external entity pointing at the off-limits flag
 file; the bomb payload nests internal entities (a small Billion Laughs). defusedxml
-refuses the DTD/entities in both.
+refuses the entity declarations in both.
 """
 from django.test import Client, TestCase
 
@@ -63,7 +63,7 @@ class XXELabTests(TestCase):
         resp = self.client.post(
             "/xxe/secure/", data=ENTITY_EXPANSION, content_type="application/xml"
         )
-        # The bomb is refused at the DTD, never expanded.
+        # The bomb is refused at its first entity declaration, never expanded.
         self.assertEqual(resp.status_code, 400)
 
     def test_secure_view_still_parses_a_legitimate_order(self):

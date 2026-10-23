@@ -13,7 +13,7 @@ nothing: lxml's no_network=True default still blocks URL loads here, so this
 parser reads files but is no SSRF proxy (with no_network=False as well, it is).
 
 The secure view (views_secure.py) routes the same request through defusedxml,
-which refuses the DTD/entities and raises before any file is read.
+which refuses the entity declaration and raises before any file is read.
 """
 from lxml import etree
 

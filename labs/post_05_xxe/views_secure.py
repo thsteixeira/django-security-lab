@@ -30,8 +30,10 @@ def webhook(request):
             "XML body.</p>"
         )
 
-    # SAFE: defusedxml refuses DTDs and entities before parsing, so a file:// or
-    # billion-laughs payload raises instead of executing. Legit XML is unaffected.
+    # SAFE: defusedxml refuses entity declarations as soon as the parser meets
+    # them, so a file:// or billion-laughs payload raises instead of executing.
+    # A plain DOCTYPE with no entities still parses (forbid_dtd is off by
+    # default). Legit XML is unaffected.
     try:
         root = defused_etree.fromstring(request.body)
     except (EntitiesForbidden, DTDForbidden, ExternalReferenceForbidden,
