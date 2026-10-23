@@ -8,7 +8,7 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A08:2025 — Software or Data Integrity Failures (CWE-915) |
 | **CWE** | CWE-915 — Improperly Controlled Modification of Dynamically-Determined Object Attributes |
-| **ASVS** | V5.1.2 — the application is protected against mass parameter assignment |
+| **ASVS** | 4.0.3 V5.1.2 — the application is protected against mass parameter assignment |
 | **Detection** | SAST — the standard tools **miss** the class (Bandit 0, Semgrep community **and** registry 0), so the **custom rule** [`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml) — **shared with Lab 07** — flags `fields='__all__'`, asserted in the hermetic CI job |
 
 This is the DRF sibling of **Lab 07 (privilege escalation)**. Same sink —
@@ -147,8 +147,9 @@ semgrep scan --config rules/mass_assignment.yaml labs/post_10_mass_assignment/vi
 - **The custom rule** ([`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml),
   **shared with Lab 07**) fires on the vulnerable serializer (line 25) and is
   **silent** on the secure one. It keys on `fields = "__all__"` inside a
-  `class Meta`, so it is framework-agnostic. Its limit (the `exclude` denylist
-  variant is out of scope) is a documented `todoruleid` in `rules/mass_assignment.py`.
+  `class Meta`, so it is framework-agnostic. Its limits (a non-empty `exclude`
+  denylist is out of scope; a django-filter `FilterSet` Meta is flagged too) are a
+  documented `todoruleid` and `todook` in `rules/mass_assignment.py`.
 
 Bandit and Semgrep are pinned but **not bundled in the lab image**. Install them
 on the host — `pip install bandit==1.9.4 semgrep==1.170.0` — and run them there;

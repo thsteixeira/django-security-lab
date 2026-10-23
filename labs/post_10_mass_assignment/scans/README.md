@@ -19,9 +19,9 @@ request — `price`, `paid`, `status`, `owner`. A customer PATCHes
 `{"price": "0.00", "paid": true}` and the order is now free and paid. Neither
 standard SAST tool catches it.
 
-**Bandit reports nothing on the views/serializers.** Its 42 plugin tests are all
-about *dangerous operations* (`eval`, `subprocess … shell=True`, `mark_safe`,
-`yaml.load`); a serializer field list is not one of them. The only thing Bandit
+**Bandit reports nothing on the views/serializers.** Its 42 plugin tests target
+*dangerous constructs* (`eval`, `subprocess … shell=True`, `mark_safe`,
+`yaml.load`, hardcoded passwords); a serializer field list is not one of them. The only thing Bandit
 flags in the module is a `B106` hardcoded password in the *test* file — noise
 unrelated to the class, and a reminder that a clean report on vulnerable code is
 a **miss**, not a pass.
@@ -61,7 +61,9 @@ view, silent on the secure one), against the same rule file.
 **Known limit** (documented in `rules/mass_assignment.py`): the rule targets
 `fields = "__all__"` specifically. The `exclude = [...]` denylist variant — a
 related but distinct antipattern that fails *open* as the model grows — is not
-caught (a `# todoruleid` in the fixture).
+caught (a `# todoruleid` in the fixture). The rule also flags a django-filter
+`FilterSet` Meta with `fields = "__all__"`, which lists filters rather than
+writable fields (a `# todook`).
 
 ## DAST
 

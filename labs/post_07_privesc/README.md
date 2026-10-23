@@ -7,7 +7,7 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A01:2025 — Broken Access Control (impact) · mechanism is CWE-915 mass assignment (A08 Software or Data Integrity Failures) |
 | **CWE** | CWE-915 — Improperly Controlled Modification of Dynamically-Determined Object Attributes |
-| **ASVS** | V5.1.2 — protect against mass parameter assignment |
+| **ASVS** | 4.0.3 V5.1.2 — protect against mass parameter assignment |
 | **Detection** | SAST — the standard tools **miss** `fields='__all__'`; a **custom rule** ([`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml)) catches it, asserted in CI (see Scanning it) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
@@ -115,18 +115,19 @@ is off in this project, so the POST needs no token (CSRF is Post 8).
 ## Scanning it
 
 The standard SAST tools **miss this class**. Bandit reports **0 on the
-views/forms** (its 42 plugins are all dangerous-*call* checks; a form field list
+views/forms** (its 42 plugins target dangerous constructs; a form field list
 is not one) — the only thing it flags is a `B106` hardcoded password in the
 *test* file, noise unrelated to the class. Semgrep's community packs report **0**
 too, and even the registry `r/python.django` has no rule for `fields='__all__'`
-(only an unrelated `direct-use-of-httpresponse` nit). The tools that catch this
+(only the unrelated XSS audit rule `direct-use-of-httpresponse` fires). The tools that catch this
 pattern are dedicated Django **linters** — Ruff `DJ007` and flake8-django `DJ07`
 — not this SAST toolchain.
 
 That is the §6.4.1 *miss* case, so this lab ships a **custom rule**,
 [`rules/mass_assignment.yaml`](../../rules/mass_assignment.yaml) (with fixture
 [`rules/mass_assignment.py`](../../rules/mass_assignment.py)). It flags
-`fields = '__all__'` inside a `Meta`, so it fires on the vulnerable view and is
+`fields = '__all__'` inside a `Meta` (and `ALL_FIELDS`, an empty `exclude`, or
+`modelform_factory(..., fields="__all__")`), so it fires on the vulnerable view and is
 silent on the explicit-allowlist fix — enforced in the hermetic custom-rules CI
 job. The rule is **shared with Post 10 (Mass Assignment)**: same sink, different
 exposed field.

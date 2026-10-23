@@ -3,7 +3,7 @@ rules:
     languages: [python]
     severity: WARNING
     message: >-
-      A ModelForm/ModelSerializer Meta uses fields = "__all__", so every field on
+      A ModelForm/ModelSerializer Meta uses fields = "__all__", so every editable field on
       the model is bindable from the request — including any permission field
       (is_staff, is_superuser, role) or otherwise sensitive column. This is a
       mass-assignment (over-posting) sink: a client can set fields the feature
@@ -16,8 +16,8 @@ rules:
         - "A08:2021 - Software and Data Integrity Failures"
         - "A08:2025 - Software or Data Integrity Failures"
       cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
-      asvs: "V5.1.2"
-      confidence: HIGH
+      asvs: "4.0.3 V5.1.2"
+      confidence: MEDIUM
       references:
         - https://thiagoteixeira.tech/blog/privilege-escalation-how-fields-all-hands-every-user-the-keys-to-your-django-admin/
         - https://thiagoteixeira.tech/blog/mass-assignment-how-over-posting-rewrites-fields-your-form-never-showed-and-how-explicit-field-lists-stop-it/
@@ -37,13 +37,24 @@ rules:
     # flag) and Post 10 (mass assignment — a non-permission field); same sink, the
     # posts differ by which field is exposed and the resulting impact.
     #
-    # Known limit (documented in rules/mass_assignment.py): this targets
-    # fields = "__all__" specifically. The `exclude = [...]` denylist variant is a
-    # related but distinct antipattern and is not caught here (# todoruleid).
-    patterns:
-      - pattern-inside: |
-          class Meta:
-              ...
-      - pattern-either:
-          - pattern: fields = "__all__"
-          - pattern: fields = '__all__'
+    # It also catches the other spellings of "every field": Django's own
+    # ALL_FIELDS constant, an empty exclude, and modelform_factory(...,
+    # fields="__all__"). Known limits (documented in rules/mass_assignment.py):
+    # a non-empty `exclude = [...]` denylist is a related but distinct
+    # antipattern and is not caught (# todoruleid); and the rule cannot tell a
+    # model Meta from a django-filter FilterSet Meta, which it flags too
+    # (# todook). It also cannot know whether the model carries anything
+    # sensitive, hence MEDIUM confidence.
+    pattern-either:
+      - patterns:
+          - pattern-inside: |
+              class Meta:
+                  ...
+          - pattern-either:
+              - pattern: fields = "__all__"
+              - pattern: fields = '__all__'
+              - pattern: fields = ALL_FIELDS
+              - pattern: exclude = []
+              - pattern: exclude = ()
+      - pattern: modelform_factory(..., fields="__all__", ...)
+      - pattern: modelform_factory(..., fields=ALL_FIELDS, ...)

@@ -8,7 +8,7 @@ the exact command, tool version, and capture date.
 | File | Tool | Kind | In CI? | What it shows |
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ⚠️ scanned, not asserted | **0 on the views/forms** — misses the class; only `B106` noise on the test password |
-| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`, `p/python`, `p/owasp-top-ten`) | SAST | ⚠️ scanned, not asserted | **0 findings** on both views — no community rule for `fields='__all__'` |
+| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`, `p/python`, `p/owasp-top-ten`; + registry `r/python.django`) | SAST | ⚠️ scanned, not asserted | **0 findings** on both views from the community packs; the registry run's only finding is the unrelated `direct-use-of-httpresponse` — no rule for `fields='__all__'` |
 | [`semgrep-custom-rule.txt`](semgrep-custom-rule.txt) | Semgrep 1.170.0 (`rules/mass_assignment.yaml`) | SAST | ✅ asserted (hermetic job) | fires on the vulnerable view (line 26, `fields='__all__'`), **silent** on the secure one |
 
 ## The standard tools MISS this class — so we wrote a rule
@@ -18,9 +18,9 @@ The vulnerability is a `ModelForm` (or DRF `ModelSerializer`) whose `Meta` uses
 including `role`, the privilege field. A member POSTs `role=staff` and promotes
 themselves. Neither standard SAST tool catches it:
 
-**Bandit reports nothing on the views/forms.** Its 42 plugin tests are all about
-*dangerous operations* (`eval`, `subprocess … shell=True`, `mark_safe`,
-`yaml.load`), and a form field list is not one of them. The only thing Bandit
+**Bandit reports nothing on the views/forms.** Its 42 plugin tests target
+*dangerous constructs* (`eval`, `subprocess … shell=True`, `mark_safe`,
+`yaml.load`, hardcoded passwords), and a form field list is not one of them. The only thing Bandit
 flags in the module is a `B106` hardcoded password in the *test* file — noise
 unrelated to the class, and a reminder that a clean report on vulnerable code is
 a **miss**, not a pass.
@@ -28,7 +28,7 @@ a **miss**, not a pass.
 **Semgrep's community packs report nothing either** (0/0). There is no rule for
 `fields='__all__'` in `p/django`/`p/python`/`p/owasp-top-ten` — and, checked
 directly, none in the registry ruleset `r/python.django` either (only an
-unrelated `direct-use-of-httpresponse` style nit fires). The tools that *do*
+unrelated XSS audit rule, `direct-use-of-httpresponse`, fires on each view). The tools that *do*
 catch this pattern are dedicated Django **linters**, not the SAST toolchain this
 series runs:
 
@@ -54,9 +54,11 @@ semgrep scan --config rules/mass_assignment.yaml labs/post_07_privesc/views_secu
 
 The rule is syntactic: `fields = "__all__"` inside a `class Meta` (covering both
 `ModelForm` and `ModelSerializer`), so it fires on the vulnerable view and stays
-silent on the explicit-allowlist fix. Its documented limit (the `exclude`
-denylist variant, a related but distinct antipattern) is a `todoruleid` in the
-fixture. **The rule is shared with Post 10 (Mass Assignment)** — same sink; the
+silent on the explicit-allowlist fix. It also catches the other spellings of
+"every field" (`ALL_FIELDS`, an empty `exclude`, `modelform_factory(...,
+fields="__all__")`). Its documented limits are a non-empty `exclude` denylist (a
+related but distinct antipattern, a `todoruleid` in the fixture) and a
+django-filter `FilterSet` Meta, which it flags too (a `todook`). **The rule is shared with Post 10 (Mass Assignment)** — same sink; the
 two posts differ by which field is exposed (07: a permission/`role` field →
 escalation; 10: a non-permission field → integrity).
 
