@@ -32,4 +32,6 @@ class SqlInjectionLabTests(TestCase):
 
     def test_secure_view_still_finds_real_matches(self):
         resp = self.client.get("/sql-injection/secure/", {"q": "Welcome"})
-        self.assertContains(resp, "Welcome")
+        # The page always echoes "Query term: Welcome"; the note's body appears
+        # only when the search actually returned the row.
+        self.assertContains(resp, "a public note")
