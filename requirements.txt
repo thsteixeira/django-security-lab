@@ -23,7 +23,21 @@ defusedxml==0.7.1
 # write, disclosing data GET permissions would have refused). Neither reaches
 # Lab 10 — it uses the default renderers and its sink is serializer field
 # exposure, not upload size or AdminRenderer — but the gate is the gate.
-djangorestframework==3.17.2
+#
+# Bumped 3.17.2 -> 3.18.2 (Oct 23, 2026) because the SCA gate went red on three
+# advisories published Oct 22, 2026 against every version < 3.18.2:
+# GHSA-33wh-fxxf-88vv / CVE-2026-114138 (an Accept header packed with large
+# quoted parameters costs seconds of CPU in content negotiation),
+# GHSA-3547-9m27-7rxg / CVE-2026-114136 (JSONParser decodes the body with the
+# charset the client names, so a compression codec defeats
+# DATA_UPLOAD_MAX_MEMORY_SIZE) and GHSA-xw6w-gcfp-cf8m / CVE-2026-114137
+# (TokenProxy.delete() reports success and revokes nothing). The first two are
+# denial-of-service paths Lab 10's open JSON endpoints do pass through, though
+# the lab is never deployed; the third needs rest_framework.authtoken, which is
+# not installed. 3.18 drops Django < 5.2 (5.2.17 is pinned above) and changes
+# many=True serializer errors to a dict; no lab uses a list serializer. 3.18.3,
+# out the same day, only restores order_by_precedence, which DRF no longer calls.
+djangorestframework==3.18.2
 # B8 — the MFA stack, introduced with Lab 15. django-otp supplies the device
 # models, the TOTP plugin, OTPMiddleware and the otp_required decorator. Its only
 # hard dependency is Django itself (the qrcode/segno extras are optional and not
