@@ -5,10 +5,12 @@ It mirrors Lab 02's two views: mark_safe() on an unsanitised value is the bug;
 mark_safe(nh3.clean(...)) is the fix. Lines annotated as a rule hit must match;
 lines annotated ok must not. The two indirect cases document the rule's one
 known limit — being syntactic, it cannot see sanitisation done through an
-intermediate variable (a false positive marked todook).
+intermediate variable (a false positive marked todook). The format_html cases
+show why only a literal format string is exempt: the helper escapes its
+arguments, never the format string.
 """
 import nh3
-from django.utils.html import escape, format_html
+from django.utils.html import escape, format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 
@@ -30,6 +32,29 @@ def secure_escaped(comment):
 def safe_literal():
     # ok: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
     return mark_safe("<b>constant, not user input</b>")
+
+
+def formatted_literal(comment):
+    # ok: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+    return mark_safe(format_html("<b>{}</b>", comment.body))
+
+
+def formatted_user_format_string(request):
+    # format_html() does not escape its format string.
+    # ruleid: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+    return mark_safe(format_html(request.GET["markup"], ""))
+
+
+def joined_literal(comments):
+    # ok: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+    return mark_safe(format_html_join("
+", "<li>{}</li>", ((c.body,) for c in comments)))
+
+
+def joined_user_format_string(request, comments):
+    # ruleid: thiagoteixeira.django.security.xss.mark-safe-without-sanitiser
+    return mark_safe(format_html_join("
+", request.GET["fmt"], ((c.body,) for c in comments)))
 
 
 def indirect_vulnerable(comment):

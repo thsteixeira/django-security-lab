@@ -13,8 +13,8 @@
 # Why this rule exists: the standard tools cannot separate this bug from its fix
 # (see bandit.txt - Bandit flags mark_safe on BOTH views; semgrep.txt - the
 # community rules flag NEITHER). This custom rule is deliberately syntactic:
-# mark_safe() on a non-literal that is not an nh3.clean()/escape()/format_html()
-# call. It fires on the vulnerable view and stays silent on the secure one - the
+# mark_safe() on a non-literal that is not an nh3.clean()/escape() call or a
+# format_html() call with a literal format string. It fires on the vulnerable view and stays silent on the secure one - the
 # clean vulnerable/secure scan-assert this class otherwise can't have.
 #
 # Verbatim output; no normalization was needed.

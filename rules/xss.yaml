@@ -42,10 +42,14 @@ rules:
     # an import alias and SafeString(x) slip past it, and it never sees
     # templates. The lab views call mark_safe() inline, where this rule is
     # exact.
+    #
+    # format_html() and format_html_join() escape their arguments but never the
+    # format string, so only a literal format string is exempt:
+    # mark_safe(format_html(request.GET["markup"], "")) still fires.
     patterns:
       - pattern: mark_safe($X)
       - pattern-not: mark_safe("...")
       - pattern-not: mark_safe(nh3.clean(...))
       - pattern-not: mark_safe(escape(...))
-      - pattern-not: mark_safe(format_html(...))
-      - pattern-not: mark_safe(format_html_join(...))
+      - pattern-not: mark_safe(format_html("...", ...))
+      - pattern-not: mark_safe(format_html_join($SEP, "...", ...))

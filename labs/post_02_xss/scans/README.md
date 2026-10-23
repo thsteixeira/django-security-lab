@@ -37,7 +37,8 @@ That is exactly the narrow, documented case where a **custom rule** earns its
 place ([`rules/xss.yaml`](../../../rules/xss.yaml), with the stem-paired fixture
 [`rules/xss.py`](../../../rules/xss.py)). It is deliberately syntactic —
 `mark_safe()` on a value that is not a string literal and not an
-`nh3.clean()` / `escape()` / `format_html()` call — so it **fires on the
+`nh3.clean()` / `escape()` call or a `format_html()` call with a literal format
+string (the helper never escapes the format string itself) — so it **fires on the
 vulnerable view and stays silent on the secure one**, the clean scan-assert the
 standard tools couldn't give. `semgrep-custom-rule.txt` is that run; CI enforces
 it in a hermetic job (`semgrep --test` on the fixture, then the fire/silent

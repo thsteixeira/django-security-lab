@@ -122,15 +122,16 @@ does not drift into CSRF (that is Post 8).
 ## Scanning it
 
 The standard SAST tools do **not** cleanly separate the bug from the fix here —
-Bandit flags `mark_safe()` on **both** views (its `B308`/`B703` match the call by
-name, never the argument), and the Semgrep community packs report **neither**:
+Bandit flags `mark_safe()` on **both** views (`B308` matches the call by name,
+and `B703` treats only string literals as safe), and the Semgrep community packs report **neither**:
 Semgrep's `mark_safe` rule (`avoid-mark-safe`) is `audit`/`LOW` and excluded from
 the curated packs, and run directly it fires on both views too (it excludes only
 `format_html()` and literals, not `nh3.clean()`). That is the
 narrow case where a **custom rule** earns its place:
 [`rules/xss.yaml`](../../rules/xss.yaml), with its stem-paired fixture
 [`rules/xss.py`](../../rules/xss.py). It flags `mark_safe()` on a value that is
-not a literal and not an `nh3.clean()`/`escape()`/`format_html()` call — so it
+not a literal and not an `nh3.clean()`/`escape()` call or a `format_html()` call
+with a literal format string — so it
 fires on the vulnerable view and stays silent on the secure one, the scan-assert
 the standard tools couldn't give. A hermetic CI job runs `semgrep --test` on the
 fixture and then that fire/silent assert on the two views.
