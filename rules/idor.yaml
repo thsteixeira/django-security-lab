@@ -16,7 +16,7 @@ rules:
         - "A01:2021 - Broken Access Control"
         - "A01:2025 - Broken Access Control"
       cwe: "CWE-639: Authorization Bypass Through User-Controlled Key"
-      asvs: "V4.2.1"
+      asvs: "4.0.3 V4.2.1"
       confidence: MEDIUM
       references:
         - https://thiagoteixeira.tech/blog/broken-access-control-and-idor-when-logging-in-is-not-the-same-as-being-allowed/
@@ -27,9 +27,9 @@ rules:
     # unscoped ORM lookup matches nothing - Bandit finds only a hardcoded test
     # password in tests.py, noise unrelated to the class. The Semgrep community
     # packs (p/django, p/python, p/owasp-top-ten; 156 Python rules) report 0 on
-    # both views. Semgrep's own docs explain why: IDOR "is the absence of an
-    # authorization check," the vulnerable code "appears syntactically correct,"
-    # and the recommended fix is "writing custom rules for your application that
+    # both views. Semgrep's own docs explain why: IDOR "is closer to a logic flaw:
+    # it's the absence of an authorization check at the right point in the request
+    # flow," so the advice is to "write custom rules for your application that
     # describe the access control logic you're expecting." This is that rule.
     #
     # It is deliberately syntactic: it flags get_object_or_404 / get_list_or_404
@@ -42,6 +42,14 @@ rules:
     # the get_object_or_404/get_list_or_404 shortcuts, so a raw Model.objects.get(
     # pk=pk) is the same bug but slips past it (# todoruleid). Taint mode does not
     # help here - there is no dangerous data flow, only a missing predicate.
+    # Also confirmed with Semgrep 1.170.0: it flags lookups scoped another way (a
+    # related manager, get_object_or_404(request.user.notes, pk=pk), or a
+    # pre-filtered queryset) and lookups of objects nobody owns (a published post
+    # by slug); and ANY owner=/user= kwarg silences it, whatever its value, so
+    # user=request.GET["uid"] passes. Nor does it see an unscoped DRF queryset
+    # (queryset = Document.objects.all(), the post's Pattern 2): no shortcut call,
+    # no match. A finding means "check who should reach this object", not a
+    # verdict.
     patterns:
       - pattern-either:
           - pattern: get_object_or_404(...)

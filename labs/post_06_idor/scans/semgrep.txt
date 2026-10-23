@@ -10,10 +10,11 @@
 # Tool: Semgrep 1.170.0  |  Captured: 2026-07-27
 # Result: 0 findings on BOTH views (156 Python community rules run). The packs
 #         ship no rule for owner-unscoped object lookups. Semgrep's own docs say
-#         why: IDOR "is the absence of an authorization check," the vulnerable
-#         code "appears syntactically correct," and the fix is "writing custom
-#         rules for your application that describe the access control logic you're
-#         expecting" (docs.semgrep.dev/learn/vulnerabilities/idor). A MISS - the
+#         why: IDOR "is closer to a logic flaw: it's the absence of an
+#         authorization check at the right point in the request flow," so the
+#         advice is to "write custom rules for your application that describe the
+#         access control logic you're expecting"
+#         (semgrep.dev/docs/learn/vulnerabilities/idor). A MISS - the
 #         same gap Bandit has. See scans/README.md.
 # ============================================================================
 

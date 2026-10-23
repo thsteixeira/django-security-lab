@@ -7,7 +7,7 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A01:2025 — Broken Access Control |
 | **CWE** | CWE-639 — Authorization Bypass Through User-Controlled Key |
-| **ASVS** | V4.2.1 — protect data/APIs against IDOR |
+| **ASVS** | 4.0.3 V4.2.1 — protect data/APIs against IDOR |
 | **Detection** | SAST — the standard tools **miss** this class; a **custom rule** ([`rules/idor.yaml`](../../rules/idor.yaml)) catches it, asserted in CI (see Scanning it) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
@@ -143,10 +143,10 @@ models authorization, so an unscoped `get_object_or_404()` matches nothing. The
 only thing it flags in the module is a `B106` hardcoded-password on the *test*
 password — noise unrelated to the class. The Semgrep community packs report **0
 findings** too (156 Python rules). Semgrep's own docs explain why, and it doubles
-as the justification for a custom rule: IDOR "is the absence of an authorization
-check," the vulnerable code "appears syntactically correct," and the fix is
-"writing custom rules for your application that describe the access control logic
-you're expecting" ([Semgrep docs](https://docs.semgrep.dev/learn/vulnerabilities/idor)).
+as the justification for a custom rule: IDOR "is closer to a logic flaw: it's the
+absence of an authorization check at the right point in the request flow," so the
+advice is to "write custom rules for your application that describe the access
+control logic you're expecting" ([Semgrep docs](https://docs.semgrep.dev/learn/vulnerabilities/idor)).
 
 That is the §6.4.1 case where a **custom rule** earns its place:
 [`rules/idor.yaml`](../../rules/idor.yaml), with its stem-paired fixture

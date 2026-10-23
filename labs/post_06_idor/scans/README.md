@@ -41,9 +41,8 @@ writing our own rule:
 
 > "Unlike traditional injection attacks, IDOR isn't about where the input goes.
 > IDOR is closer to a logic flaw: it's the absence of an authorization check at
-> the right point in the request flow." … "What is required, is writing custom
-> rules for your application that describe the access control logic you're
-> expecting."
+> the right point in the request flow." … "Instead, write custom rules for your
+> application that describe the access control logic you're expecting."
 > — [Semgrep, *IDOR Detection with Semgrep*](https://docs.semgrep.dev/learn/vulnerabilities/idor)
 
 The vulnerable and the fixed view differ only by an application-specific
@@ -72,7 +71,14 @@ to trace, only a *missing predicate*. Its two honest limits are documented in th
 fixture: a lookup scoped by an app-specific field name it doesn't know
 (`account=request.user`) is a false positive (`# todook`), and a raw
 `Model.objects.get(pk=...)` — the same bug outside the shortcut — slips past it
-(`# todoruleid`).
+(`# todoruleid`). Checked with Semgrep 1.170.0, it also flags lookups scoped
+another way (a related manager, `get_object_or_404(request.user.notes, pk=pk)`, or
+a pre-filtered queryset) and lookups of objects nobody owns (a published post by
+slug), and **any** `owner=`/`user=` kwarg silences it whatever its value, so
+`user=request.GET["uid"]` passes. Nor does it see an unscoped DRF queryset
+(`queryset = Document.objects.all()`, the post's Pattern 2): there is no shortcut
+call to match. A finding means "check who should reach this object", not a
+verdict.
 
 ## Why no DAST here
 
