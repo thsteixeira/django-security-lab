@@ -209,7 +209,8 @@ Three tests assert `django-otp`'s own throttling rather than anything about the
 vulnerability. `TOTPDevice.verify_token()` calls `verify_is_allowed()` before it
 checks anything and `throttle_increment()` on failure, so the backoff starts at the
 **first** wrong code and doubles — 1, 2, 4, 8, 16 seconds — with the counter stored
-on the device row, surviving restarts and shared across workers.
+on the device row, surviving restarts and shared across workers once verification
+runs inside a transaction with the row locked, which `django_otp.verify_token()` does.
 
 That is why this lab has no "unthrottled OTP" view to brute-force: turning the
 throttle off takes a deliberate, documented setting (`OTP_TOTP_THROTTLE_FACTOR = 0`),

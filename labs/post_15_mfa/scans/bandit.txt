@@ -4,7 +4,7 @@
 # Command:
 #   bandit -r labs/post_15_mfa/
 #
-# Tool: Bandit 1.9.4  |  Captured: 2026-10-10
+# Tool: Bandit 1.9.4  |  Captured: 2026-10-10 (re-run 2026-10-24: same finding)
 # Result: a COMPLETE MISS - ONE finding, on a seeded fixture password.
 #         Nothing in any view. The defect is an ABSENT decorator, which has
 #         no AST node.
@@ -37,7 +37,7 @@ Test results:
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 432
+	Total lines of code: 457
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 

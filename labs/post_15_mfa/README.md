@@ -1,7 +1,7 @@
 # Lab 15 — Multi-Factor Authentication
 
 Companion lab for the blog post
-**[Multi-Factor Authentication](https://thiagoteixeira.tech/blog/)** *(link finalised on publication)*.
+**[Multi-Factor Authentication: Why @login_required Is the Wrong Question Once You Have a Second Factor](https://thiagoteixeira.tech/blog/multi-factor-authentication-why-login-required-is-the-wrong-question-once-you-have-a-second-factor/)**.
 
 | | |
 |---|---|
@@ -144,7 +144,9 @@ if not verified:
 
 The backoff starts at the **first** failed code and doubles — 1, 2, 4, 8, 16
 seconds — and the counter lives on the device row, so it survives a restart and
-holds across workers, which a hand-rolled cache counter would not. While throttled
+holds across workers, provided the read and the write are serialized: `views_verify.py`
+calls `django_otp.verify_token()`, which reloads the device with `select_for_update()`
+inside a transaction, rather than the device method directly. While throttled
 even a *correct* code is refused, which is what makes guessing pointless rather
 than merely slow (`test_while_throttled_even_the_correct_code_is_refused`).
 
