@@ -54,7 +54,7 @@ jobs:
       # This job asserts only the labs the STANDARD tools catch — fire on the
       # vulnerable view, silent on the secure one — with each lab's rationale beside
       # its steps below: Lab 01 (SQLi), Lab 04 (command injection), Lab 08 (CSRF,
-      # via Semgrep's audit tier). Labs the standard tools MISS or can't-distinguish
+      # via Semgrep's audit tier), Lab 16 (JWT). Labs the standard tools MISS or can't-distinguish
       # ship a custom rule and are asserted — and documented — in the custom-rules
       # job below (02, 03, 05, 06, 07, 09, 10, 14, 15). Lab 11 (brute force) has no static signal in
       # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
@@ -122,6 +122,22 @@ jobs:
             labs/post_08_csrf/views_secure.py > csrf_secure.json
           python -c "import json,sys; n=len(json.load(open('csrf_secure.json'))['results']); print('audit-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
+      # Lab 16 (JWT) — the curated packs catch the unverified decode
+      # (python.jwt.security.unverified-jwt-decode, in p/python and
+      # p/owasp-top-ten): it fires on jwt.decode(..., options={"verify_signature":
+      # False}) and the secure view, which lets DRF's JWTAuthentication decode,
+      # draws nothing. Bandit has no JWT check, so it carries no assert. No custom rule.
+      - name: Semgrep community fires on the JWT vulnerable view
+        run: |
+          semgrep scan --config p/django --config p/python --config p/owasp-top-ten --json --quiet \
+            labs/post_16_jwt/views_vulnerable.py > jwt_vuln.json
+          python -c "import json,sys; n=len(json.load(open('jwt_vuln.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Semgrep community is silent on the JWT secure view
+        run: |
+          semgrep scan --config p/django --config p/python --config p/owasp-top-ten --json --quiet \
+            labs/post_16_jwt/views_secure.py > jwt_secure.json
+          python -c "import json,sys; n=len(json.load(open('jwt_secure.json'))['results']); print('semgrep findings:', n); sys.exit(0 if n == 0 else 1)"
+
   custom-rules:
     name: Custom Semgrep rules (hermetic) — fixture + lab assert
     runs-on: ubuntu-latest
@@ -171,8 +187,8 @@ jobs:
       #     labs/post_15_mfa/rules/mfa.yaml names the MFA-protected models and flags
       #     a @login_required view without @otp_required that reads one, plus an
       #     INFO inventory of every login() call (the session-minting side doors).
-      # (Labs the standard tools DO catch are asserted in the sast job: 01 SQLi and
-      # 04 command injection directly, 08 CSRF via Semgrep's audit tier. Lab 11
+      # (Labs the standard tools DO catch are asserted in the sast job: 01 SQLi,
+      # 04 command injection and 16 JWT directly, 08 CSRF via Semgrep's audit tier. Lab 11
       # brute force ships NO rule — a forgeable key + a missing control, unmatchable
       # by any tier; gated by tests.py + a dynamic curl probe.)
       - run: pip install "semgrep==1.170.0"

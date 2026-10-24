@@ -43,3 +43,11 @@ djangorestframework==3.18.2
 # hard dependency is Django itself (the qrcode/segno extras are optional and not
 # installed — the labs are command-line first). pip-audit-clean at this pin.
 django-otp==1.7.3
+# B12 — the JWT stack, introduced with Lab 16. djangorestframework-simplejwt
+# issues and verifies the tokens; PyJWT is its JWT library, pinned explicitly
+# because the lab's claims (the one-algorithm list, the alg:none and key-confusion
+# refusals, the unverified-decode path) are PyJWT behaviour. 2.15.1 is past the
+# key-confusion fixes of CVE-2022-29217 (2.4.0) and CVE-2026-48526 (2.13.0).
+# Both pip-audit-clean at these pins.
+djangorestframework-simplejwt==5.5.1
+PyJWT==2.15.1

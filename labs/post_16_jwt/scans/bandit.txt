@@ -1,0 +1,139 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 16 and the project's SIMPLE_JWT settings
+#
+# Commands:
+#   bandit -r labs/post_16_jwt/
+#   bandit config/settings.py
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-10-24
+# Result: NOTHING in any view. Bandit 1.9.4 ships no check that mentions JWT
+#         (its 75 tests, and a grep of the installed package for "jwt",
+#         return none), so the unverified decode on views_vulnerable.py:35
+#         is invisible to it.
+#
+#         Lab dir: 2 findings, both B105 hardcoded_password_string false
+#         positives in tests.py - a URL constant named TOKEN (L42) and the
+#         dict key "token_type" (L115). B105 matches names against
+#         pas+wo?r?d|pass(phrase)?|pwd|token|secrete? at a word edge.
+#
+#         Settings: 2 findings. SECRET_KEY (L20) is a fair hit - it is the
+#         key simplejwt signs with by default. "CHECK_REVOKE_TOKEN": True
+#         (L115) is the FIX, reported as a hardcoded password because the key
+#         ends in _TOKEN; B105 reports whatever constant sits beside a
+#         matching dict key. ROTATE_REFRESH_TOKENS escapes on its trailing S.
+#
+# Normalised: captured on Windows; the settings run printed the path as
+#   ".\config/settings.py", shown here as "config/settings.py". Findings,
+#   counts and line numbers are untouched.
+# ============================================================================
+
+$ bandit -r labs/post_16_jwt/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-10-24 20:14:56.386097+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: '/jwt/token/'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_16_jwt/tests.py:42:8
+41	SECURE = "/jwt/secure/export/"
+42	TOKEN = "/jwt/token/"
+43	REFRESH = "/jwt/token/refresh/"
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'access'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_16_jwt/tests.py:115:12
+114	        claims = {
+115	            "token_type": "access",
+116	            "exp": now + 300,
+117	            "iat": now,
+118	            "jti": uuid.uuid4().hex,
+119	            "user_id": str(self.bob.pk),
+120	        }
+121	        forged = jwt.encode(claims, settings.SECRET_KEY, algorithm="HS256")
+122	        self.assertContains(self.get(VULN, forged), FLAG)
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 299
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):
+
+
+$ bandit config/settings.py
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.3
+Run started:2026-10-24 20:14:56.679519+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'django-security-lab-not-a-secret-never-deploy-this'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: config/settings.py:20:13
+19	# Not a secret worth protecting — this app is never deployed. Constant for reproducibility.
+20	SECRET_KEY = "django-security-lab-not-a-secret-never-deploy-this"
+21	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'True'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: config/settings.py:115:4
+114	    "BLACKLIST_AFTER_ROTATION": True,
+115	    "CHECK_REVOKE_TOKEN": True,
+116	}
+117	
+118	# @login_required redirects here (POST-only endpoint; a GET just 405s, which is a
+119	# fine "you must log in" signal for a lab).
+120	LOGIN_URL = "/accounts/login/"
+121	
+122	ROOT_URLCONF = "config.urls"
+123	
+124	TEMPLATES = [
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 93
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):

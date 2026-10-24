@@ -1,0 +1,204 @@
+# ============================================================================
+# SAST evidence - Semgrep (community AND audit/registry tiers) vs Lab 16
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_16_jwt/
+#   semgrep scan --config r/python.django --config r/python              labs/post_16_jwt/
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten \
+#                --config r/python.django --config r/python config/settings.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-24
+# Result: the CURATED packs CATCH the class and split the pair - 2 findings
+#         from 156 rules: unverified-jwt-decode on views_vulnerable.py:35
+#         (the bug), and jwt-python-none-alg on tests.py:49 (the test's own
+#         forging helper, which builds an alg "none" token on purpose).
+#         views_secure.py draws nothing. No custom rule is needed; CI asserts
+#         fire-on-vulnerable / silent-on-secure.
+#
+#         The audit tier returns 5: the same two, plus direct-use-of-
+#         httpresponse x2 in exports.py (the labs' inline-HTML convention,
+#         shared by BOTH views, so it carries no signal about the pair) and
+#         unvalidated-password on tests.py:134 (a fixture set_password()).
+#
+#         Settings: 0 findings from 377 rules. No rule in any tier reads a
+#         SIMPLE_JWT block; the defaults this project replaces are invisible.
+#
+# Normalised: captured on Windows; Semgrep printed paths with backslashes
+#   ("labs\post_16_jwt\tests.py"), shown here with forward slashes.
+#   Findings, counts and line numbers are untouched. The "--metrics=off"
+#   flag used in the capture only stops Semgrep sending usage metrics; it
+#   does not change rules or results, and is omitted from the commands above.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_16_jwt/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 16 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      16          Community     565                                                                
+  python          151      12                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 2 (2 blocking)
+ • Rules run: 156
+ • Targets scanned: 16
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 156 rules on 16 files: 2 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 2 Code Findings │
+└─────────────────┘
+                             
+    labs/post_16_jwt/tests.py
+   ❯❯❱ python.jwt.security.jwt-none-alg.jwt-python-none-alg
+          ❰❰ Blocking ❱❱
+          Detected use of the 'none' algorithm in a JWT token. The 'none' algorithm assumes the integrity of
+          the token has already been verified. This would allow a malicious actor to forge a JWT token that 
+          will automatically be verified. Do not explicitly use the 'none' algorithm. Instead, use an       
+          algorithm such as 'HS256'.                                                                        
+          Details: https://sg.run/Yvp4                                                                      
+                                                                                                            
+           49┆ return jwt.encode({"user_id": str(user_id)}, None, algorithm="none")
+                                        
+    labs/post_16_jwt/views_vulnerable.py
+   ❯❯❱ python.jwt.security.unverified-jwt-decode.unverified-jwt-decode
+          ❰❰ Blocking ❱❱
+          Detected JWT token decoded with 'verify=False'. This bypasses any integrity checks for the token
+          which means the token could be tampered with by malicious actors. Ensure that the JWT token is  
+          verified.                                                                                       
+          Details: https://sg.run/6nyB                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ True
+           35┆ claims = jwt.decode(token, options={"verify_signature": False})
+
+
+
+$ semgrep scan --config r/python.django --config r/python labs/post_16_jwt/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 16 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      16          Community     378                                                                
+  python          369      12                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 5 (5 blocking)
+ • Rules run: 372
+ • Targets scanned: 16
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 372 rules on 16 files: 5 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 5 Code Findings │
+└─────────────────┘
+                               
+    labs/post_16_jwt/exports.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           16┆ return HttpResponse(
+           17┆     f"<h1>Export</h1><p>{escape(user.username)} has no records.</p>"
+           18┆ )
+            ⋮┆----------------------------------------
+           20┆ return HttpResponse(f"<h1>Export</h1>{body}")
+                             
+    labs/post_16_jwt/tests.py
+   ❯❯❱ python.jwt.security.jwt-none-alg.jwt-python-none-alg
+          ❰❰ Blocking ❱❱
+          Detected use of the 'none' algorithm in a JWT token. The 'none' algorithm assumes the integrity of
+          the token has already been verified. This would allow a malicious actor to forge a JWT token that 
+          will automatically be verified. Do not explicitly use the 'none' algorithm. Instead, use an       
+          algorithm such as 'HS256'.                                                                        
+          Details: https://sg.run/Yvp4                                                                      
+                                                                                                            
+           49┆ return jwt.encode({"user_id": str(user_id)}, None, algorithm="none")
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'self.alice' is being set without validating the password. Call                     
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password("a new passphrase, long enough",
+              user=self.alice): self.alice.set_password("a new passphrase, long enough")                              
+          134┆ self.alice.set_password("a new passphrase, long enough")
+                                        
+    labs/post_16_jwt/views_vulnerable.py
+   ❯❯❱ python.jwt.security.unverified-jwt-decode.unverified-jwt-decode
+          ❰❰ Blocking ❱❱
+          Detected JWT token decoded with 'verify=False'. This bypasses any integrity checks for the token
+          which means the token could be tampered with by malicious actors. Ensure that the JWT token is  
+          verified.                                                                                       
+          Details: https://sg.run/6nyB                                                                    
+                                                                                                          
+           ▶▶┆ Autofix ▶ True
+           35┆ claims = jwt.decode(token, options={"verify_signature": False})
+
+
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python config/settings.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 791 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  python          368       1          Community     791                                                                
+  <multilang>       9       1                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 377
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 377 rules on 1 file: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/

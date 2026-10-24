@@ -48,6 +48,10 @@ def index(request):
         "vulnerable one serves the flag, the secure one wants the second factor. "
         "POST a TOTP code to /mfa/verify/ &mdash; one endpoint, correct in both "
         "worlds</li>"
+        "<li>POST alice's login to /jwt/token/, then GET /jwt/vulnerable/export/ "
+        "and /jwt/secure/export/ with an UNSIGNED token naming bob's user_id "
+        "(read the seed log) &mdash; the vulnerable one never checks the "
+        "signature</li>"
         "</ul>"
     )
 
@@ -71,4 +75,5 @@ urlpatterns = [
     path("passwords/", include("labs.post_13_weak_passwords.urls")),
     path("password-reset/", include("labs.post_14_password_reset.urls")),
     path("mfa/", include("labs.post_15_mfa.urls")),
+    path("jwt/", include("labs.post_16_jwt.urls")),
 ]

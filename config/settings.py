@@ -10,6 +10,8 @@ docker-compose stack. A single backend keeps what you run identical to what CI
 runs and to the scanner output committed under each lab's scans/ directory.
 """
 import os
+import secrets
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +35,10 @@ INSTALLED_APPS = [
     # no device rows exist, so nothing changes for them.
     "django_otp",
     "django_otp.plugins.otp_totp",
+    # B12 — the JWT stack, introduced with Lab 16. The blacklist app stores
+    # issued and revoked refresh tokens; the SIMPLE_JWT block below needs it for
+    # BLACKLIST_AFTER_ROTATION. Inert for every lab that issues no JWT.
+    "rest_framework_simplejwt.token_blacklist",
     "labs",
     "labs.post_01_sql_injection",
     "labs.post_02_xss",
@@ -49,6 +55,7 @@ INSTALLED_APPS = [
     "labs.post_13_weak_passwords",
     "labs.post_14_password_reset",
     "labs.post_15_mfa",
+    "labs.post_16_jwt",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -85,6 +92,28 @@ MIDDLEWARE = [
 # runner overrides this with the locmem backend automatically, which is how
 # tests.py reads the same link out of `django.core.mail.outbox`.
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# B12 — the JWT configuration, introduced with Lab 16. A global setting on
+# purpose: this block IS the lesson (see CONTRIBUTING.md, "Settings are global;
+# lab behaviour should not be"), and no other lab issues a JWT. simplejwt's
+# defaults sign with SECRET_KEY, keep access tokens five minutes and refresh
+# tokens a day, never rotate, and never revoke on a password change; this is the
+# fix. The signing key comes from the environment, or is drawn at random when the
+# process starts — never SECRET_KEY, which is committed above. A random key means
+# tokens do not survive a restart, which is fine for a lab and the honest default:
+# a key in the repository is a key everyone has. Any later JWT lab inherits this
+# block; change it knowingly.
+JWT_SIGNING_KEY = os.environ.get("JWT_SIGNING_KEY") or secrets.token_urlsafe(48)
+
+SIMPLE_JWT = {
+    "SIGNING_KEY": JWT_SIGNING_KEY,
+    "ALGORITHM": "HS256",
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "CHECK_REVOKE_TOKEN": True,
+}
 
 # @login_required redirects here (POST-only endpoint; a GET just 405s, which is a
 # fine "you must log in" signal for a lab).
