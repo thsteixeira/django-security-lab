@@ -71,17 +71,21 @@ curl -s http://127.0.0.1:8000/mass-assignment/receipt/1/
 # {"receipt":"FLAG{mass_assignment_over_posted_order_state}", ...}
 ```
 
-**2. The fix holds** — the same over-post against the secure view is silently
-dropped; the request still succeeds, but only `quantity` changes:
+**2. The fix holds** — reseed first: both views share the same rows, and the
+secure serializer refuses a new protected-field write but does not undo step 1's.
+`seed_labs` recreates a clean order under a new pk (assume `pk=2`; PostgreSQL does
+not reuse ids). The same over-post against the secure view is silently dropped;
+the request still succeeds, but only `quantity` changes:
 
 ```bash
-curl -s -X PATCH http://127.0.0.1:8000/mass-assignment/secure/orders/1/ \
+docker compose exec web python manage.py seed_labs
+curl -s -X PATCH http://127.0.0.1:8000/mass-assignment/secure/orders/2/ \
   -H "Content-Type: application/json" \
   --data-binary '{"quantity": 2, "price": "0.00", "paid": true, "status": "shipped"}'
-# {"id":1,"quantity":2,"price":"49.90","paid":false,"status":"pending","owner":1}
+# {"id":2,"quantity":2,"price":"49.90","paid":false,"status":"pending","owner":1}
 # 200 OK — quantity written, price/paid/status/owner untouched
 
-curl -s http://127.0.0.1:8000/mass-assignment/receipt/1/
+curl -s http://127.0.0.1:8000/mass-assignment/receipt/2/
 # {"receipt":null,"detail":"Nothing forged: this order is not both paid and free.", ...}
 ```
 

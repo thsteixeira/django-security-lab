@@ -27,8 +27,8 @@ rules:
     # checks; none looks at a ModelForm/Serializer field list. The Semgrep
     # community packs (p/django, p/python, p/owasp-top-ten) report 0 on both the
     # fields="__all__" view and the explicit-list view, and even the registry
-    # ruleset r/python.django has no rule for it (only an unrelated
-    # direct-use-of-httpresponse style nit fires). The tools that DO flag this are
+    # ruleset r/python.django has no rule for it (only the unrelated XSS audit
+    # rule direct-use-of-httpresponse fires). The tools that DO flag this are
     # dedicated Django linters — Ruff's DJ007 (django-all-with-model-form) and
     # flake8-django's DJ07 — not the SAST toolchain this series runs. So a custom
     # Semgrep rule earns its place.
@@ -44,7 +44,8 @@ rules:
     # antipattern and is not caught (# todoruleid); and the rule cannot tell a
     # model Meta from a django-filter FilterSet Meta, which it flags too
     # (# todook). It also cannot know whether the model carries anything
-    # sensitive, hence MEDIUM confidence.
+    # sensitive, or whether read_only_fields covers every field, hence MEDIUM
+    # confidence.
     pattern-either:
       - patterns:
           - pattern-inside: |

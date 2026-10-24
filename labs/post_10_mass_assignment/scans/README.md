@@ -9,7 +9,7 @@ the exact command, tool version, and capture date (2026-08-13).
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ⚠️ scanned, not asserted | **0 on the views/serializers** — misses the class; only `B106` noise on the test password |
 | [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (`p/django`, `p/python`, `p/owasp-top-ten`; + registry `r/python.django`, `r/python`) | SAST | ⚠️ scanned, not asserted | **0 findings** on the serializer — no community *or* registry rule for `fields='__all__'` |
-| [`semgrep-custom-rule.txt`](semgrep-custom-rule.txt) | Semgrep 1.170.0 (`rules/mass_assignment.yaml`) | SAST | ✅ asserted (hermetic job) | fires on the vulnerable view (line 25, `fields='__all__'`), **silent** on the secure one |
+| [`semgrep-custom-rule.txt`](semgrep-custom-rule.txt) | Semgrep 1.170.0 (`rules/mass_assignment.yaml`) | SAST | ✅ asserted (hermetic job) | fires on the vulnerable view (line 25, `fields='__all__'`), **silent** on the secure one (raw runs re-captured 2026-10-23) |
 
 ## The standard tools MISS this class — the same rule as Lab 07 catches it
 
@@ -58,12 +58,15 @@ but in the **field and the impact**:
 Both are asserted in the hermetic custom-rules CI job (fires on the vulnerable
 view, silent on the secure one), against the same rule file.
 
-**Known limit** (documented in `rules/mass_assignment.py`): the rule targets
-`fields = "__all__"` specifically. The `exclude = [...]` denylist variant — a
-related but distinct antipattern that fails *open* as the model grows — is not
-caught (a `# todoruleid` in the fixture). The rule also flags a django-filter
-`FilterSet` Meta with `fields = "__all__"`, which lists filters rather than
-writable fields (a `# todook`).
+**Known limits** (documented in `rules/mass_assignment.py`): the rule targets
+the spellings of "every field" — `fields = "__all__"`, Django's `ALL_FIELDS`, an
+empty `exclude`, `modelform_factory(..., fields="__all__")`. A non-empty
+`exclude = [...]` denylist — a related but distinct antipattern that fails
+*open* as the model grows — is not caught (a `# todoruleid` in the fixture),
+and the rule flags a django-filter `FilterSet` Meta with `fields = "__all__"`,
+which lists filters rather than writable fields (a `# todook`). By design it also
+misses an explicit list that names one field too many and a `**request.data`
+splat, since neither says "all" (the post's Patterns 2 and 3).
 
 ## DAST
 
