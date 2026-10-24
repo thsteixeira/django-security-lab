@@ -7,18 +7,18 @@ file starts with a header giving the exact command, tool version, and capture da
 |---|---|---|---|---|
 | [`check_deploy.txt`](check_deploy.txt) | Django `check --deploy` | framework scanner | — | `security.W012` flags the missing `SESSION_COOKIE_SECURE` — the cookie half, named as a hijacking risk |
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | — | **0 findings** — no dangerous call to match |
-| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | SAST | — | community **0**; registry tier **5 unrelated nits**, nothing about rotation |
+| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 | SAST | — | community **0**; registry tier **5 unrelated findings**, nothing about rotation |
 
-## Why the SAST tools miss this — and why no custom rule fits
+## Why the SAST tools miss this — and why no custom rule ships
 
-Session fixation is the sharpest "no rule can find this" case in the series,
-because there are **two** flaws and neither is a pattern:
+Session fixation is a hard case for the standard tools, because there are
+**two** flaws and neither is a dangerous call:
 
 1. **The rotation flaw is the *absence* of a call.** The vulnerable view fails by
    *not* calling `login()`/`cycle_key()`. A static rule can flag a dangerous call;
-   it cannot flag a missing one. There is no syntactic shape to write a rule
-   against — the same wall Lab 11 hit — so this lab ships **no custom rule**
-   (§6.4.1), consistent with the "don't fake a rule" principle.
+   it cannot flag a missing one. What it *can* match is the hand-written write
+   to Django's private `_auth_user_id` key a hand-rolled login must make; this
+   lab ships **no custom rule** for it (§6.4.1), and `tests.py` is the gate.
 
 2. **The cookie flaw is a *setting*, not code.** `SESSION_COOKIE_SECURE = False`
    is a value, not a call site. Bandit and the Semgrep code rules don't inspect
@@ -27,8 +27,8 @@ because there are **two** flaws and neither is a pattern:
 **Bandit** is 0/0 (not even the usual test-password noise — the lab imports the
 shared cast password instead of hard-coding one). **Semgrep community** is 0/156.
 The **registry/audit tier** reports 5 findings, all unrelated: the
-`direct-use-of-httpresponse` audit XSS nit on the lab's plain `HttpResponse`
-views (the same nit Labs 08/11 surface) plus one maintainability nit.
+XSS audit rule `direct-use-of-httpresponse` on the lab's plain `HttpResponse`
+views (the same rule Labs 08/11 surface) plus one maintainability rule.
 
 ## What *does* catch it
 

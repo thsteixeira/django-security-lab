@@ -8,7 +8,7 @@ Companion lab for the blog post
 | **OWASP** | A07:2025 — Authentication Failures |
 | **CWE** | CWE-384 — Session Fixation · CWE-614 — Sensitive Cookie Without 'Secure' Flag (the cookie half) |
 | **ASVS** | V3.2.1 — a new session token is generated on authentication |
-| **Detection** | No SAST rule possible (the flaw is the *absence* of `cycle_key()` — nothing to match). Django's own **`manage.py check --deploy`** flags the cookie half (`security.W012`); the rotation half is proven by `tests.py` + the `curl` probe below |
+| **Detection** | No scanner tier flags it, and no custom rule ships (the flaw is the *absence* of `cycle_key()`; a narrow rule could only match the hand-written `_auth_user_id` write). Django's own **`manage.py check --deploy`** flags the cookie half (`security.W012`); the rotation half is proven by `tests.py` + the `curl` probe below |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -91,8 +91,8 @@ docker compose run --rm web python manage.py test labs.post_12_session_fixation
 ```
 
 > **Why this reproduces fixation.** In the real attack the victim's browser is
-> *tricked* into adopting the attacker's id (a crafted link, an XSS write to
-> `document.cookie`, a `Set-Cookie` on a shared subdomain). On the command line
+> *tricked* into adopting the attacker's id (an XSS write to `document.cookie`,
+> a `Set-Cookie` on a shared subdomain; Django never takes it from the URL). On the command line
 > that trick is just `-b "sessionid=$K"` on the victim's login — the mechanism is
 > identical: the id existed before login, and the vulnerable view authenticated
 > it in place.
@@ -131,9 +131,9 @@ The standard SAST tools **miss this class**, and for a deeper reason than usual:
 there is no dangerous *call* and — for the fixation half — no code at all, only a
 missing `cycle_key()`. **Bandit** reports **0** on the views. **Semgrep's
 community packs** report **0** (156 rules); the registry/audit tier surfaces only
-**unrelated nits** (`direct-use-of-httpresponse` on the lab's plain `HttpResponse`
-views, a maintainability nit) — nothing about session rotation. A rule cannot
-flag an absent call, so — like Lab 11 — this lab ships **no custom rule** (§6.4.1).
+**unrelated findings** (the XSS audit rule `direct-use-of-httpresponse` on the plain
+`HttpResponse` views, one maintainability rule) — nothing about session rotation.
+A narrow rule could flag the hand-written `_auth_user_id` write; none ships here.
 
 What *does* catch the cookie half is **Django's own deployment scanner**:
 

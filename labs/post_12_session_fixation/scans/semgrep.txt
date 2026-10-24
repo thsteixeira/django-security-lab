@@ -7,26 +7,128 @@
 #   semgrep scan --config r/python.django --config r/python \
 #           labs/post_12_session_fixation/
 #
-# Tool: Semgrep 1.170.0  |  Captured: 2026-08-19
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-24 (re-captured with the full
+#         finding records; the 2026-08-19 capture kept only a rule summary)
 # Result: community packs 0 findings. The registry/audit tier reports 5 findings,
-#         ALL unrelated to the class - 'direct-use-of-httpresponse' on the lab's
-#         plain HttpResponse views (the same audit-tier XSS nit seen in Labs 08/11)
-#         plus one 'is-function-without-parentheses' maintainability nit. Nothing
-#         targets session rotation or fixation, because the flaw is the ABSENCE of
-#         cycle_key() - there is no syntactic shape to write a rule against, so
-#         (like Lab 11) this lab ships no custom rule. See scans/README.md.
+#         ALL unrelated to the class - four 'direct-use-of-httpresponse' (the
+#         audit-tier XSS rule seen in Labs 08/11) on the lab's plain HttpResponse
+#         views, and one 'is-function-without-parentheses' maintainability finding
+#         on request.user.is_authenticated, an attribute since Django 1.10 (a false
+#         positive). Nothing targets session rotation or fixation: the flaw is the
+#         ABSENCE of cycle_key(). A narrow rule could match the hand-written
+#         _auth_user_id write; this lab ships none. See scans/README.md.
 # ============================================================================
 
 ## 1. Community packs
 $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_12_session_fixation/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 16 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      16          Community     565                                                                
+  python          151      11                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 156
+ • Targets scanned: 16
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
 Ran 156 rules on 16 files: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
 
 ## 2. Registry / audit tier - checked before concluding 'no rule fits'
 $ semgrep scan --config r/python.django --config r/python labs/post_12_session_fixation/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 16 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      16          Community     378                                                                
+  python          369      11                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 5 (5 blocking)
+ • Rules run: 372
+ • Targets scanned: 16
+ • Parsed lines: ~100.0%
+ • Scan was limited to files tracked by git
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
 Ran 372 rules on 16 files: 5 findings.
 
-# Findings by rule (all unrelated to session fixation):
-#   3x  python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
-#   +   python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
-#       (5 line-level findings total; the audit XSS rule fires on any HttpResponse
-#        carrying a variable, regardless of the escape() the views apply.)
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 5 Code Findings │
+└─────────────────┘
+                                                 
+    labs\post_12_session_fixation\views_secure.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           25┆ return HttpResponse(f"logged in as {user.username} (session rotated)\n")
+                                                  
+    labs\post_12_session_fixation\views_session.py
+    ❯❱ python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+          ❰❰ Blocking ❱❱
+          Is "is_authenticated" a function or an attribute? If it is a function, you may have meant
+          request.user.is_authenticated() because request.user.is_authenticated is always true.    
+          Details: https://sg.run/oYR7                                                             
+                                                                                                   
+           22┆ who = request.user.username if request.user.is_authenticated else "anonymous"
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           23┆ return HttpResponse(
+           24┆     f"session={request.session.session_key} user={escape(who)}\n"
+           25┆ )
+            ⋮┆----------------------------------------
+           32┆ return HttpResponse(
+           33┆     f"<h1>Private secret</h1><p>{escape(request.user.username)}: "
+           34┆     f"{escape(body)}</p>"
+           35┆ )
+                                                     
+    labs\post_12_session_fixation\views_vulnerable.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           37┆ return HttpResponse(f"logged in as {user.username} (session NOT rotated)\n")

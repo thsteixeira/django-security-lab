@@ -27,14 +27,14 @@ class SessionFixationLabTests(TestCase):
         Secret.objects.create(owner=self.bob, body=f"private: {FLAG}")
 
     def test_login_rotates_the_session_key_on_secure_view(self):
-        # The defining property: the session id must CHANGE across login().
+        # The session id must CHANGE across login() — and bob must stay logged in.
         c = Client()
         c.get("/session/whoami/")  # establish a pre-login session
         before = c.session.session_key
         self.assertIsNotNone(before)
         c.post("/session/secure/login/", {"username": "bob", "password": PASSWORD})
-        after = c.session.session_key
-        self.assertNotEqual(before, after)  # cycle_key() rotated it
+        self.assertNotEqual(before, c.session.session_key)  # cycle_key() rotated it
+        self.assertIn(FLAG, c.get("/session/secret/").content.decode())  # still bob
 
     def test_vulnerable_view_does_not_rotate_the_session_key(self):
         c = Client()
