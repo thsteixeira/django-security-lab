@@ -1,15 +1,15 @@
 # Lab 14 — Password Reset Flows
 
 Companion lab for the blog post
-**[Password Reset Flows](https://thiagoteixeira.tech/blog/)** *(link finalised on publication)*.
+**[Password Reset Flows: Why a uuid4 in a Database Row Is a Password That Never Expires](https://thiagoteixeira.tech/blog/password-reset-flows-why-a-uuid4-in-a-database-row-is-a-password-that-never-expires/)**.
 
 | | |
 |---|---|
 | **OWASP** | A07:2025 — Authentication Failures |
 | **CWE** | CWE-640 — Weak Password Recovery Mechanism · CWE-613 — Insufficient Session Expiration · CWE-204 — Observable Response Discrepancy |
-| **ASVS** | V2.5.1 — reset tokens are time-limited and single-use · V2.5.6 — recovery does not reveal whether an account exists |
-| **NIST** | SP 800-63B-4 §5.1.3 — an out-of-band secret **SHALL** be valid for a limited time and **SHALL** be single-use |
-| **Detection** | **No rule in any tier distinguishes the bug from the fix.** Bandit: 5 findings, none in a view. Semgrep curated packs: 2 findings, the *same rule on both halves*. Semgrep audit/registry tier: 17 findings, and the 10 that reach the two confirm views land in **matching pairs**. So this lab ships a **custom rule** — [`rules/password_reset.yaml`](../../rules/password_reset.yaml). See [`scans/`](scans/) |
+| **ASVS** | 5.0.0 V6.4.3 — a secure process for resetting a forgotten password (4.0.3: V2.5.6 — recovery paths use a secure recovery mechanism) |
+| **NIST** | SP 800-63B-4 §4.2.1.2 — an issued recovery code, a link included, **SHALL** be valid for at most 24 hours when sent to an email address |
+| **Detection** | **No rule in any tier distinguishes the bug from the fix.** Bandit: 5 findings, none in a view. Semgrep curated packs: 2 findings, the *same rule on both halves*. Semgrep audit/registry tier: 17 findings, and the 10 that land in the two view files come in **matching pairs**. So this lab ships a **custom rule** — [`rules/password_reset.yaml`](../../rules/password_reset.yaml). See [`scans/`](scans/) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -99,7 +99,7 @@ control** — a framework setting, not anything in the view — and
 `test_allowed_hosts_is_what_actually_blocks_the_poisoned_host` asserts exactly
 that, unoverridden.
 
-Three tests then set `ALLOWED_HOSTS = ["*"]`, which is the single most common way
+Two tests then set `ALLOWED_HOSTS = ["*"]`, which is the single most common way
 real projects switch that backstop off. With it gone, the two link builders can
 finally be compared:
 

@@ -2,7 +2,9 @@
 # SAST evidence - the custom rule vs Lab 14
 #
 # Commands:
-#   semgrep scan --config rules/password_reset.yaml #       labs/post_14_password_reset/views_vulnerable.py #       labs/post_14_password_reset/views_secure.py
+#   semgrep scan --config rules/password_reset.yaml \
+#       labs/post_14_password_reset/views_vulnerable.py \
+#       labs/post_14_password_reset/views_secure.py
 #   semgrep --test --config rules/password_reset.yaml rules/password_reset.py
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-09-13

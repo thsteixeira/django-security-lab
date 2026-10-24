@@ -10,7 +10,7 @@ Postgres is the only supported backend, locally and in CI:
 matters. It fails the moment ``views_vulnerable.confirm`` starts reading either of
 the two columns it already writes.
 
-Three tests carry an ``@override_settings(ALLOWED_HOSTS=["*"])``. That is not a
+Two tests carry an ``@override_settings(ALLOWED_HOSTS=["*"])``. That is not a
 convenience — it is the experiment. ``ALLOWED_HOSTS`` is what stops host-header
 poisoning in this lab (``test_allowed_hosts_is_what_actually_blocks_the_poisoned_host``
 proves it, unoverridden), and ``["*"]`` is the single most common way real projects
