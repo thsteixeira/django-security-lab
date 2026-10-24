@@ -7,8 +7,8 @@
 #
 # Tool: Semgrep 1.170.0  |  Captured: 2026-08-09
 # Result: community = 0 findings (156 rules). The audit/registry tier (372 rules)
-#         finds only UNRELATED nits - unvalidated-password on the seed's
-#         set_password, and direct-use-of-httpresponse style suggestions. NO rule
+#         finds only UNRELATED findings - unvalidated-password on the seed's
+#         set_password, and the XSS audit rule direct-use-of-httpresponse. NO rule
 #         for the forgeable-X-Forwarded-For antipattern, and none for the missing
 #         per-account limit, in ANY tier. The class is a keying/absence LOGIC flaw
 #         that no scanner models. A MISS across the board. See scans/README.md.

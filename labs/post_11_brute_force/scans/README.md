@@ -7,7 +7,7 @@ and capture date.
 | File | Tool | Kind | In CI? | What it shows |
 |---|---|---|---|---|
 | [`bandit.txt`](bandit.txt) | Bandit 1.9.4 | SAST | ⚠️ scanned, not asserted | nothing on the views — only `B105` noise on the seeded weak password |
-| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (community **and** audit/registry) | SAST | ⚠️ scanned, not asserted | community 0/0; the audit tier finds only unrelated nits — **no rule for this class in any tier** |
+| [`semgrep.txt`](semgrep.txt) | Semgrep 1.170.0 (community **and** audit/registry) | SAST | ⚠️ scanned, not asserted | community 0/0; the audit tier finds only unrelated findings — **no rule for this class in any tier** |
 
 ## This is the lab where no scanner tier helps — and that is the point
 
@@ -26,8 +26,8 @@ across the module (156 rules).
 
 **Semgrep's audit/registry tier** (`r/python.django`, `r/python`; 372 rules) —
 checked because a rule can hide in the audit tier (that is the CSRF lab's whole
-lesson). Here it finds only **unrelated** nits: `unvalidated-password` on the
-seed's `set_password`, and `direct-use-of-httpresponse` style suggestions on the
+lesson). Here it finds only **unrelated** findings: `unvalidated-password` on the
+seed's `set_password`, and the XSS audit rule `direct-use-of-httpresponse` on the
 views. There is **no** rule for the forgeable-`X-Forwarded-For` antipattern, and
 **no** rule for a missing per-account limit, in any tier.
 
@@ -52,11 +52,11 @@ The two vulnerable properties are both things a syntactic scanner cannot assert:
    There is nothing to match. A custom rule can flag a dangerous call; it cannot
    flag a missing one.
 
-This is what separates Lab 11 from IDOR (Post 6) and mass assignment (Post 7):
+This is what separates Lab 11 from IDOR (Post 6) and mass assignment (Posts 7, 10):
 the standard tools **missed those too**, but a syntactic shape survived — an
 owner-unscoped `.get()`, a `fields='__all__'` — so a custom rule could still fire
-on the vulnerable view and stay silent on the secure one. Here neither flaw
-leaves such a shape, so the "miss" becomes **unruleable**, not "write a rule."
+on the vulnerable view and stay silent on the secure one. Here the views differ only
+by a call to this lab's own helper, so the "miss" is **unruleable**, not "write a rule."
 
 So Lab 11 ships **no custom rule** and carries **no SAST scan-assert** — its gate
 is `tests.py` (the universal gate). The automatable signal is **dynamic**: the
@@ -70,24 +70,24 @@ from a threat-model review and a dynamic probe, not from any scanner.
 Brute force is the weakest DAST candidate in the series, for three reasons:
 
 1. **No signature to read.** DAST tools like sqlmap fire a crafted payload and
-   read a fingerprint in the *response*. Brute force leaves none — its only
-   symptom is volume across many requests, so detecting it is a load test, not a
-   scan.
-2. **You cannot safely probe for an absence.** The only way a scanner could be
-   *sure* a limit is missing is to hammer the endpoint until it blocks or falls
-   over — a denial-of-service. That is why OWASP ZAP ships no active rule for a
-   missing rate limit, and there is no push-button equivalent of sqlmap here.
+   read a fingerprint in the *response*. Brute force leaves none — its symptom
+   is behaviour across many requests, not something in one response.
+2. **You cannot safely probe for an absence.** Testing a *declared* policy is
+   bounded (WSTG-ATHN-03: a few failures, then the correct password — what
+   `tests.py` does), but a scanner that knows no policy could only be *sure* a
+   limit is missing by hammering the endpoint until it blocks or falls over — a
+   denial-of-service. OWASP ZAP's active scan has no rule for a missing rate limit.
 3. **A generic tool gets this lab backwards.** Point Hydra or a ZAP fuzzer at
    `vulnerable/login/` *without* rotating the header and it is blocked after five
-   tries, so it reports the endpoint as **protected** — a clean false negative.
+   tries and finds no password, so the run reads as **protected** — a false negative.
    The bypass only appears to a probe that already knows to forge and rotate
    `X-Forwarded-For`, which is threat-model knowledge, not a scanner's rule set.
 
 So the dynamic signal is the `curl` XFF-rotation loop in the lab README (and
 `tests.py`, which runs the same attack deterministically through the Django test
 client). A scripted credential-stuffing run (Hydra, Patator, a ZAP fuzzing loop)
-would show the same effect, but it measures timing and only commits as a
-non-deterministic transcript — so none is captured here.
+with the same rotation would show the same effect; none is captured here, because
+`tests.py` is the deterministic version of it.
 
 `django-axes` is the production control the post recommends; a linter/scanner
 still would not *find* the missing lockout for you — you have to know to add it.

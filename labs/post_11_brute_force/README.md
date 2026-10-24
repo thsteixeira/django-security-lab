@@ -39,7 +39,9 @@ The limiter helpers live in [`_throttle.py`](_throttle.py) (a tiny hand-rolled
 cache counter — 5 failures per 5-minute window). The lab is about *what the
 counter is keyed on*, not the machinery. In production you would not hand-roll
 this: **`django-axes`** counts per account in a shared store and is the answer
-the post recommends.
+the post recommends — with `AXES_LOCKOUT_PARAMETERS = [["username"], ["ip_address"]]`
+(its default is IP-only) and, behind a proxy, `AXES_CLIENT_IP_CALLABLE` (left alone,
+axes reads `REMOTE_ADDR`, which there is the proxy shared by every visitor).
 
 ## Run it
 
@@ -120,21 +122,21 @@ prop so the wordlist is short; policy is Post 13 and storage is Post 18.
 
 This is the lab where **no scanner tier helps** — and that is the lesson. The two
 flaws are *the wrong key* (semantic) and *a missing control* (an absence); static
-analysis can match neither.
+analysis can match neither cleanly.
 
 ```bash
 bandit -r labs/post_11_brute_force/                 # only B105 noise on the seed's weak password
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_11_brute_force/   # 0 findings
-semgrep scan --config r/python.django --config r/python labs/post_11_brute_force/                     # audit tier: only unrelated nits
+semgrep scan --config r/python.django --config r/python labs/post_11_brute_force/                     # audit tier: only unrelated findings
 ```
 
 So there is **no custom rule** and **no CI scan-assert** for this class — its gate
 is `tests.py` (the universal one). It is not a **DAST** target either: brute force
-has no response signature (its symptom is volume, which is a load test), a scanner
-cannot safely probe for a missing control without hammering the endpoint into a
-denial-of-service, and — worst of all — a generic tool run against
-`vulnerable/login/` *without* rotating the header is blocked after five tries and
-reports the endpoint as **protected**, a clean false negative. So the automatable
+has no response signature (its symptom is behaviour across requests), a scanner
+that knows no policy cannot prove a missing control without hammering the endpoint
+into a denial-of-service, and — worst of all — a generic tool run against
+`vulnerable/login/` *without* rotating the header is blocked after five tries,
+finds no password, and reads as **protected**: a false negative. So the automatable
 signal is **dynamic and hand-aimed**: the `curl` loop above rotates a forged
 header and watches the IP-keyed limit fail to trigger while the per-account
 lockout holds. Full reasoning and the captured runs are under [`scans/`](scans/)
