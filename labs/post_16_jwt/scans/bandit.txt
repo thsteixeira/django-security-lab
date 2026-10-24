@@ -33,7 +33,7 @@ $ bandit -r labs/post_16_jwt/
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.3
-Run started:2026-10-24 20:14:56.386097+00:00
+Run started:2026-10-24 23:17:03.976104+00:00
 
 Test results:
 >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: '/jwt/token/'
@@ -57,14 +57,17 @@ Test results:
 117	            "iat": now,
 118	            "jti": uuid.uuid4().hex,
 119	            "user_id": str(self.bob.pk),
-120	        }
-121	        forged = jwt.encode(claims, settings.SECRET_KEY, algorithm="HS256")
-122	        self.assertContains(self.get(VULN, forged), FLAG)
+120	            # CHECK_REVOKE_TOKEN refuses a token without this claim whatever signed
+121	            # it, so leaving it out would make the 401 below pass for the wrong reason.
+122	            api_settings.REVOKE_TOKEN_CLAIM: get_md5_hash_password(self.bob.password),
+123	        }
+124	        genuine = jwt.encode(claims, api_settings.SIGNING_KEY, algorithm="HS256")
+125	        forged = jwt.encode(claims, settings.SECRET_KEY, algorithm="HS256")
 
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 299
+	Total lines of code: 302
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 
@@ -88,7 +91,7 @@ $ bandit config/settings.py
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.3
-Run started:2026-10-24 20:14:56.679519+00:00
+Run started:2026-10-24 23:17:04.216491+00:00
 
 Test results:
 >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'django-security-lab-not-a-secret-never-deploy-this'

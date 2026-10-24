@@ -31,7 +31,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework_simplejwt.settings import DEFAULTS, api_settings
 from rest_framework_simplejwt.tokens import AccessToken, BlacklistMixin, RefreshToken
-from rest_framework_simplejwt.utils import aware_utcnow
+from rest_framework_simplejwt.utils import aware_utcnow, get_md5_hash_password
 
 from labs._common.users import PASSWORD
 
@@ -108,8 +108,8 @@ class JwtLabTests(TestCase):
         self.assertEqual(resp.status_code, 401)
 
     def test_secure_refuses_a_token_signed_with_secret_key(self):
-        """The leaked-SECRET_KEY case: a well-formed token, signed with the key
-        simplejwt would use by default. This project signs with its own key."""
+        """The leaked-SECRET_KEY case: claims the secure view accepts under the
+        project's key, signed instead with the key simplejwt uses by default."""
         now = int(time.time())
         claims = {
             "token_type": "access",
@@ -117,8 +117,13 @@ class JwtLabTests(TestCase):
             "iat": now,
             "jti": uuid.uuid4().hex,
             "user_id": str(self.bob.pk),
+            # CHECK_REVOKE_TOKEN refuses a token without this claim whatever signed
+            # it, so leaving it out would make the 401 below pass for the wrong reason.
+            api_settings.REVOKE_TOKEN_CLAIM: get_md5_hash_password(self.bob.password),
         }
+        genuine = jwt.encode(claims, api_settings.SIGNING_KEY, algorithm="HS256")
         forged = jwt.encode(claims, settings.SECRET_KEY, algorithm="HS256")
+        self.assertContains(self.get(SECURE, genuine), FLAG)
         self.assertContains(self.get(VULN, forged), FLAG)
         self.assertEqual(self.get(SECURE, forged).status_code, 401)
 

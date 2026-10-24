@@ -100,9 +100,9 @@ Step 2 is the part worth not skipping: the secure view is not merely refusing pe
 it serves alice her own export the moment her token is genuine.
 
 `tests.py` adds three more forgeries the secure view refuses and the vulnerable one
-does not: alice's genuine token with its payload edited to name bob, a well-formed
-token signed with the project's committed `SECRET_KEY` (the key simplejwt would sign
-with by default), and an expired token.
+does not: alice's genuine token with its payload edited to name bob, claims the
+secure view accepts under the project's key, signed instead with the committed
+`SECRET_KEY` (the key simplejwt would sign with by default), and an expired token.
 
 ## Logout does not end the access token
 
@@ -164,7 +164,7 @@ wrong.
 
 ```bash
 docker compose run --rm web python manage.py test labs.post_16_jwt
-# Ran 14 tests in 4.539s
+# Ran 14 tests in 4.524s
 #
 # OK (expected failures=1)
 ```

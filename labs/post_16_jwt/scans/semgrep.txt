@@ -18,7 +18,7 @@
 #         The audit tier returns 5: the same two, plus direct-use-of-
 #         httpresponse x2 in exports.py (the labs' inline-HTML convention,
 #         shared by BOTH views, so it carries no signal about the pair) and
-#         unvalidated-password on tests.py:134 (a fixture set_password()).
+#         unvalidated-password on tests.py:139 (a fixture set_password()).
 #
 #         Settings: 0 findings from 377 rules. No rule in any tier reads a
 #         SIMPLE_JWT block; the defaults this project replaces are invisible.
@@ -85,7 +85,6 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                                                                                                           
            ▶▶┆ Autofix ▶ True
            35┆ claims = jwt.decode(token, options={"verify_signature": False})
-
 
 
 $ semgrep scan --config r/python.django --config r/python labs/post_16_jwt/
@@ -156,7 +155,7 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                                                                                                               
            ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password("a new passphrase, long enough",
               user=self.alice): self.alice.set_password("a new passphrase, long enough")                              
-          134┆ self.alice.set_password("a new passphrase, long enough")
+          139┆ self.alice.set_password("a new passphrase, long enough")
                                         
     labs/post_16_jwt/views_vulnerable.py
    ❯❯❱ python.jwt.security.unverified-jwt-decode.unverified-jwt-decode
@@ -168,7 +167,6 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                                                                                                           
            ▶▶┆ Autofix ▶ True
            35┆ claims = jwt.decode(token, options={"verify_signature": False})
-
 
 
 $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python config/settings.py

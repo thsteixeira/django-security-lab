@@ -39,8 +39,12 @@ curl -sL https://semgrep.dev/c/r/python.jwt.security.unverified-jwt-decode.unver
 It matches `jwt.decode(..., options={..., "verify_signature": False, ...}, ...)`, or
 the same dictionary assigned to a variable first and passed as `options=`. The bug
 is a literal in the source, and a rule can match a literal. That pattern is also
-its limit: it names `jwt.decode` and a dictionary literal, so by its own definition
-it does not cover the same switch spelled any other way.
+its limit. Semgrep resolves imports, so `import jwt as tokenlib` or
+`from jwt import decode` does not hide the call
+([pattern syntax, "Imports"](https://semgrep.dev/docs/writing-rules/pattern-syntax#imports));
+but the pattern is a dictionary literal, so options built any other way
+(`dict(verify_signature=False)`, or a key set after the dictionary is made) fall
+outside it.
 
 The rule ships an autofix that rewrites `False` to `True`. Applied to line 35 it
 leaves `jwt.decode(token, options={"verify_signature": True})`, a call with no key
@@ -71,7 +75,7 @@ semgrep scan --config r/python.django --config r/python labs/post_16_jwt/
 | `unverified-jwt-decode` | `views_vulnerable.py` L35 | yes — the same finding |
 | `jwt-python-none-alg` | `tests.py` L49 | the test's forging helper, as above |
 | `direct-use-of-httpresponse` | `exports.py` L16, L20 | no — the labs build HTML inline (Lab 02's class), and both views share this helper, so it says nothing about the pair |
-| `unvalidated-password` | `tests.py` L134 | no — a fixture `set_password()` (Lab 13's class) |
+| `unvalidated-password` | `tests.py` L139 | no — a fixture `set_password()` (Lab 13's class) |
 
 ## The settings: invisible to Semgrep, misread by Bandit
 
