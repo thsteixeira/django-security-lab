@@ -7,7 +7,7 @@ list and a small one. These two extend it in the two directions that matter:
 
 ``BreachListValidator``
     Offline, from a gzipped file you control. This is the one wired into
-    ``AUTH_PASSWORD_VALIDATORS`` in config/settings.py, so the lab, the test
+    the lab's policy (``policy.py``, not settings), so the lab, the test
     suite and CI never depend on a third party being reachable. Its shipped file
     holds the composition-rule survivors Django's list misses (``password123!``,
     ``summer2026!``) plus the site-specific terms no generic wordlist will ever

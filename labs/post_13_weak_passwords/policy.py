@@ -39,7 +39,7 @@ PASSWORD_POLICY = [
         "OPTIONS": {"min_length": 15},
     },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    # No NumericPasswordValidator: refusing a password for its character class is a composition rule.
     {"NAME": "labs.post_13_weak_passwords.validators.BreachListValidator"},
 ]
 

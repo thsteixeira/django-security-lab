@@ -4,7 +4,7 @@
 # Command:
 #   bandit -r labs/post_13_weak_passwords/
 #
-# Tool: Bandit 1.9.4  |  Captured: 2026-09-13
+# Tool: Bandit 1.9.4  |  Captured: 2026-09-13 (re-run 2026-10-24: same findings)
 # Result: a COMPLETE MISS on the vulnerability. Bandit has no model of
 #         Django password validation, so the unvalidated set_password() in
 #         views_vulnerable.py draws nothing. Every finding below is on the
@@ -62,7 +62,7 @@ Test results:
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 574
+	Total lines of code: 573
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 

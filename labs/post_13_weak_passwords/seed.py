@@ -29,7 +29,7 @@ VICTIM_EMAIL = "carol@example.test"
 # NumericPassword — Django's four defaults — and appears 295,389 times in HIBP.
 VICTIM_PASSWORD = "Password123!"
 
-# A passphrase that clears the hardened stack in config/settings.py: 26 characters,
+# A passphrase that clears the lab's policy (policy.py): 26 characters,
 # in neither blocklist, not numeric, not similar to any user attribute.
 STRONG_PASSWORD = "flat marble kettle horizon"
 

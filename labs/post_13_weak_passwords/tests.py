@@ -6,8 +6,8 @@ Postgres is the only supported backend, locally and in CI:
 
     docker compose run --rm web python manage.py test labs.post_13_weak_passwords
 
-``test_one_guess_captures_the_flag`` is the one that matters: it fails the moment
-``views_vulnerable.register`` starts calling ``validate_password()``.
+``test_vulnerable_register_accepts_a_breached_password`` is the one that matters: it
+fails the moment ``views_vulnerable.register`` starts calling ``validate_password()``.
 """
 
 import gzip
@@ -102,8 +102,8 @@ class WeakPasswordLabTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertFalse(User.objects.filter(username="mallory").exists())
         body = resp.content.decode()
-        # Rejected twice over: below the 15-character floor (Rule 2) AND on the
-        # breach blocklist (Rule 4). Neither reason is a composition rule.
+        # Rejected twice over: below the 15-character floor AND on the
+        # breach blocklist. Neither reason is a composition rule.
         self.assertIn("at least 15 characters", body)
         self.assertIn("known data breach", body)
 
