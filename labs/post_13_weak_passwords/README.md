@@ -184,6 +184,10 @@ docker compose run --rm web python manage.py test labs.post_13_weak_passwords
 # OK
 ```
 
+The post teaches one attack, the registration path that never validates.
+`test_validate_password_without_a_user_silently_skips_similarity` stays as a
+regression check, outside the post's focus.
+
 ## Isolation
 
 This lab teaches weak-password acceptance and nothing else. There is **no
