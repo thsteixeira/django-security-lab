@@ -9,7 +9,7 @@ one-liner is here too â€” the registry rule catches that one, and so must ours â
 plus a longer chain, the pathlib forms (open(), .read_bytes(), .open()), a URL
 kwarg (function and class-based view), a containment check that only logs and
 one on an unresolved path. The safe_join form, a record lookup
-and the post's symlink-aware check are the fixes; a hardcoded join and a non-view
+and a symlink-aware check are the fixes; a hardcoded join and a non-view
 helper must stay silent too. The regex-validated case documents the rule's one
 false positive (todook).
 """
@@ -123,7 +123,7 @@ def secure_record_lookup(request, document_id):
 
 
 def secure_symlink_aware(request):
-    # The post's symlink-aware check: resolve() follows links, then contain.
+    # A symlink-aware check: resolve() follows links, then contain.
     base = Path(DOCS_ROOT).resolve()
     candidate = (base / request.GET.get("file", "")).resolve()
     if not candidate.is_relative_to(base):
