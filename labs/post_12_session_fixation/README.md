@@ -113,8 +113,7 @@ def login_view(request):
 
 And in production, pin the cookie to HTTPS and bound its lifetime in `settings.py`:
 `SESSION_COOKIE_SECURE = True`, `SESSION_COOKIE_HTTPONLY = True` (the default),
-`SESSION_COOKIE_SAMESITE = 'Lax'` (the default), a sensible `SESSION_COOKIE_AGE` —
-see the post.
+`SESSION_COOKIE_SAMESITE = 'Lax'` (the default), and a sensible `SESSION_COOKIE_AGE`.
 
 ## Isolation
 
@@ -148,3 +147,6 @@ docker compose run --rm web python manage.py check --deploy
 proof is the deterministic `session_key`-changes-across-`login()` assertion in
 `tests.py` and the `curl` fixation probe above. The captured runs are under
 [`scans/`](scans/); `tests.py` is the runnable proof of the escalation.
+
+The post teaches one attack, the fixation. The `check --deploy` capture stays as
+the deployment check for the cookie half, outside the post's focus.
