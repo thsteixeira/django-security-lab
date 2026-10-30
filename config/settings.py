@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "labs.post_14_password_reset",
     "labs.post_15_mfa",
     "labs.post_16_jwt",
+    "labs.post_17_oauth2",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware

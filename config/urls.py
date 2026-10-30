@@ -52,6 +52,11 @@ def index(request):
         "and /jwt/secure/export/ with an UNSIGNED token naming bob's user_id "
         "(read the seed log) &mdash; the vulnerable one never checks the "
         "signature</li>"
+        "<li>set provider account bob's email to alice's at "
+        "/oauth2/provider/profile/?as=bob&amp;email=alice@example.test, then sign in "
+        "with the provider (add &amp;as=bob) at /oauth2/vulnerable/login/ and "
+        "/oauth2/secure/login/, and read /oauth2/account/ &mdash; the vulnerable "
+        "callback finds the account by email</li>"
         "</ul>"
     )
 
@@ -76,4 +81,5 @@ urlpatterns = [
     path("password-reset/", include("labs.post_14_password_reset.urls")),
     path("mfa/", include("labs.post_15_mfa.urls")),
     path("jwt/", include("labs.post_16_jwt.urls")),
+    path("oauth2/", include("labs.post_17_oauth2.urls")),
 ]

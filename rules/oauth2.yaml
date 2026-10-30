@@ -1,0 +1,63 @@
+rules:
+  - id: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: >-
+      A local account is looked up by the email claim of an ID token. Email is a
+      profile field at the identity provider: it can be changed, reassigned, or set
+      by the account holder without proof, so any provider account that carries the
+      victim's address signs in as the victim (OpenID Connect Core 5.7: email "MUST
+      NOT be used as unique identifiers"). Find the account through a stored link
+      keyed on the token's iss and sub, the only stable, unique pair, and create that
+      link only for a user who is already signed in. A new (iss, sub) is a new person:
+      send it to sign-up, never into an existing account.
+    metadata:
+      # dual-listed: rule metadata is machine-read, and the Semgrep registry
+      # carries both editions during the changeover
+      owasp:
+        - "A07:2021 - Identification and Authentication Failures"
+        - "A07:2025 - Authentication Failures"
+      cwe: "CWE-287: Improper Authentication"
+      asvs: "5.0.0 V10.5.2"
+      confidence: MEDIUM
+      references:
+        - https://thiagoteixeira.tech/series/secure-by-design/
+        - https://openid.net/specs/openid-connect-core-1_0.html#ClaimStability
+    # Why this rule exists: no rule in any tier the series runs says anything about
+    # which claim identifies a user. Empirically, against labs/post_17_oauth2 (see its
+    # scans/README.md): Bandit 1.9.4 has nothing in either view; Semgrep's curated
+    # packs (156 rules) and the registry tier (372 rules) fire only in provider.py or
+    # on both views alike; and none of the five configs mentions email_verified, an
+    # email claim, allauth or associate_by_email. That is the "no rule in any tier"
+    # outcome in the series' decision table (SECURITY_BLOG_SERIES_PLAN.md 6.4.1).
+    #
+    # Taint, because the claim usually travels through a local (`claims = ...`,
+    # `address = claims.get("email")`). Sources are the calls that produce verified
+    # claims: jwt.decode() and a verify_id_token() helper. The sink is a lookup
+    # (filter / get / get_or_create / update_or_create / exclude) whose keyword is the
+    # email field. A whole claims dict is tainted, so the sink is narrowed to the email
+    # keyword: `Identity.objects.filter(issuer=claims["iss"], subject=claims["sub"])`
+    # stays silent, and so does creating a user with `email=` (a write, not a lookup).
+    #
+    # Known limits, marked in rules/oauth2.py: a lookup keyed on a username claim
+    # (`preferred_username`), and claims fetched from a userinfo endpoint rather than
+    # an ID token, are the same mistake and are not flagged (todoruleid). A lookup
+    # behind an `email_verified` check IS flagged, on purpose.
+    pattern-sources:
+      - pattern-either:
+          - pattern: jwt.decode(...)
+          - pattern: $IDP.verify_id_token(...)
+          - pattern: verify_id_token(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $MODEL.objects.$METHOD(..., $KW=$VALUE, ...)
+              - pattern: $MODEL.objects.$CHAIN(...).$METHOD(..., $KW=$VALUE, ...)
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(filter|get|get_or_create|update_or_create|exclude)$
+          - metavariable-regex:
+              metavariable: $KW
+              regex: ^email(__(i?exact))?$
+          - focus-metavariable: $VALUE

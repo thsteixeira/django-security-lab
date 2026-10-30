@@ -1,0 +1,68 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 17
+#
+# Command:
+#   bandit -r labs/post_17_oauth2/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-10-30
+# Result: NOTHING in either view. 2 findings, both B105 hardcoded_password_string
+#         in provider.py, the in-lab identity provider: the committed client
+#         secret (L44, a fair hit on a lab constant that is never deployed) and
+#         the dictionary key "token_type" beside the constant "Bearer" (L133, a
+#         false positive - B105 matches the word "token" in a key name).
+#         Bandit 1.9.4 has no check about which claim identifies a user, so the
+#         email lookup on views_vulnerable.py:46 is outside what it looks for.
+#
+# Captured in a python:3.13-slim container (pip install bandit==1.9.4, the CI
+# pin) with the repository mounted read-only; paths are relative to the repo
+# root, so nothing needed normalising. Output below is unedited.
+# ============================================================================
+
+$ bandit -r labs/post_17_oauth2/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.15
+Run started:2026-10-30 18:33:50.746554+00:00
+
+Test results:
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'lab-client-secret-not-a-secret-never-deploy'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_17_oauth2/provider.py:44:16
+43	# never deployed.
+44	CLIENT_SECRET = "lab-client-secret-not-a-secret-never-deploy"
+45	
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'Bearer'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_17_oauth2/provider.py:133:8
+132	        "access_token": secrets.token_urlsafe(24),
+133	        "token_type": "Bearer",
+134	        "id_token": id_token,
+135	    }
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 534
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 0
+Files skipped (0):

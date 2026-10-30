@@ -1,0 +1,239 @@
+# ============================================================================
+# SAST evidence - Semgrep (community AND audit/registry tiers) vs Lab 17
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_17_oauth2/
+#   semgrep scan --config r/python.django --config r/python              labs/post_17_oauth2/
+#   for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
+#     curl -sL "https://semgrep.dev/c/$c" | grep -ciE '<identity-claim terms>'
+#   done
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-30
+# Result: NO TIER TELLS THE PAIR APART.
+#         Curated packs: 2 findings from 156 rules, both in provider.py (the
+#         in-lab identity provider), none in either view:
+#           - open-redirect on the authorize view (L67-82) - a false positive:
+#             redirect_uri is checked against an exact allowlist first, and the
+#             rule's only exemptions are is_safe_url() and
+#             url_has_allowed_host_and_scheme();
+#           - jwt-python-hardcoded-secret on the ID-token jwt.encode() (L118) - a
+#             fair hit on the committed lab client secret.
+#         Registry tier: 7 from 372 rules - the same two, plus
+#         direct-use-of-httpresponse x5, which lands on BOTH callbacks alike
+#         (views_vulnerable.py L50, views_secure.py L47), on views_connect.py
+#         (L40, L49) and on provider.py (L99): the labs' inline-HTML convention,
+#         no signal about the pair.
+#         Rule definitions: none of the five configs mentions email_verified, an
+#         email claim, email__iexact, preferred_username, allauth, social_core,
+#         associate_by_email, EMAIL_AUTHENTICATION, id_token or uid_field (the
+#         grep loop at the end, run on the host with curl, prints 0 for each).
+#         That is the "no rule in any tier" outcome, which warrants a custom
+#         rule - see semgrep-custom-rule.txt.
+#
+# The two scans were captured in a python:3.13-slim container (pip install
+# semgrep==1.170.0, the CI pin) with the repository mounted read-only; paths are
+# relative to the repo root. The grep loop ran on the host (Git Bash, curl),
+# because the container has no curl. Output below is unedited.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_17_oauth2/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 14 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      14          Community     565                                                                
+  python          151      13                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 2 (2 blocking)
+ • Rules run: 156
+ • Targets scanned: 14
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 14 files: 2 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 2 Code Findings │
+└─────────────────┘
+                                   
+    labs/post_17_oauth2/provider.py
+    ❯❱ python.django.security.injection.open-redirect.open-redirect
+          ❰❰ Blocking ❱❱
+          Data from request (redirect_uri) is passed to redirect(). This is an open redirect and could be 
+          exploited. Ensure you are redirecting to safe URLs by using django.utils.http.is_safe_url(). See
+          https://cwe.mitre.org/data/definitions/601.html for more information.                           
+          Details: https://sg.run/Ave2                                                                    
+                                                                                                          
+           67┆ redirect_uri = request.GET.get("redirect_uri", "")
+           68┆ if redirect_uri not in REDIRECT_URIS:
+           69┆     return HttpResponseBadRequest("redirect_uri is not registered\n")
+           70┆ account = _account(request)
+           71┆ if account is None:
+           72┆     return HttpResponseBadRequest(
+           73┆         "sign in at the provider: add &as=alice or &as=bob to this URL\n"
+           74┆     )
+           75┆
+           76┆ code = AuthorizationCode.objects.create(
+             [hid 6 additional lines, adjust with --max-lines-per-finding] 
+   
+   ❯❯❱ python.jwt.security.jwt-hardcode.jwt-python-hardcoded-secret
+          ❰❰ Blocking ❱❱
+          Hardcoded JWT secret or private key is used. This is a Insufficiently Protected Credentials     
+          weakness: https://cwe.mitre.org/data/definitions/522.html Consider using an appropriate security
+          mechanism to protect the credentials (e.g. keeping secrets in environment variables)            
+          Details: https://sg.run/l2E9                                                                    
+                                                                                                          
+          118┆ id_token = jwt.encode(
+          119┆     {
+          120┆         "iss": ISSUER,
+          121┆         "sub": account.subject,
+          122┆         "aud": CLIENT_ID,
+          123┆         "iat": now,
+          124┆         "exp": now + 300,
+          125┆         "email": account.email,
+          126┆         "email_verified": account.email_verified,
+          127┆     },
+             [hid 3 additional lines, adjust with --max-lines-per-finding] 
+
+
+$ semgrep scan --config r/python.django --config r/python labs/post_17_oauth2/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 14 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      14          Community     378                                                                
+  python          369      13                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 7 (7 blocking)
+ • Rules run: 372
+ • Targets scanned: 14
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 372 rules on 14 files: 7 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 7 Code Findings │
+└─────────────────┘
+                                   
+    labs/post_17_oauth2/provider.py
+    ❯❱ python.django.security.injection.open-redirect.open-redirect
+          ❰❰ Blocking ❱❱
+          Data from request (redirect_uri) is passed to redirect(). This is an open redirect and could be 
+          exploited. Ensure you are redirecting to safe URLs by using django.utils.http.is_safe_url(). See
+          https://cwe.mitre.org/data/definitions/601.html for more information.                           
+          Details: https://sg.run/Ave2                                                                    
+                                                                                                          
+           67┆ redirect_uri = request.GET.get("redirect_uri", "")
+           68┆ if redirect_uri not in REDIRECT_URIS:
+           69┆     return HttpResponseBadRequest("redirect_uri is not registered\n")
+           70┆ account = _account(request)
+           71┆ if account is None:
+           72┆     return HttpResponseBadRequest(
+           73┆         "sign in at the provider: add &as=alice or &as=bob to this URL\n"
+           74┆     )
+           75┆
+           76┆ code = AuthorizationCode.objects.create(
+             [hid 6 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           99┆ return HttpResponse(
+          100┆     f"provider account {escape(account.username)}: email is now "
+          101┆     f"{escape(account.email)} (unverified)\n"
+          102┆ )
+   
+   ❯❯❱ python.jwt.security.jwt-hardcode.jwt-python-hardcoded-secret
+          ❰❰ Blocking ❱❱
+          Hardcoded JWT secret or private key is used. This is a Insufficiently Protected Credentials     
+          weakness: https://cwe.mitre.org/data/definitions/522.html Consider using an appropriate security
+          mechanism to protect the credentials (e.g. keeping secrets in environment variables)            
+          Details: https://sg.run/l2E9                                                                    
+                                                                                                          
+          118┆ id_token = jwt.encode(
+          119┆     {
+          120┆         "iss": ISSUER,
+          121┆         "sub": account.subject,
+          122┆         "aud": CLIENT_ID,
+          123┆         "iat": now,
+          124┆         "exp": now + 300,
+          125┆         "email": account.email,
+          126┆         "email_verified": account.email_verified,
+          127┆     },
+             [hid 3 additional lines, adjust with --max-lines-per-finding] 
+                                        
+    labs/post_17_oauth2/views_connect.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           40┆ return HttpResponse(
+           41┆     f"connected provider subject {escape(claims['sub'])} to
+               {escape(request.user.username)}\n"                         
+           42┆ )
+            ⋮┆----------------------------------------
+           49┆ return HttpResponse(f"<h1>{escape(request.user.username)}'s account</h1>{body}")
+                                       
+    labs/post_17_oauth2/views_secure.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           47┆ return HttpResponse(f"logged in as {escape(user.username)}\n")
+                                           
+    labs/post_17_oauth2/views_vulnerable.py
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           50┆ return HttpResponse(f"logged in as {escape(user.username)}\n")
+
+
+$ for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
+    curl -sL "https://semgrep.dev/c/$c" | grep -ciE 'email_verified|\["email"\]|email__iexact|preferred_username|allauth|social_core|associate_by_email|EMAIL_AUTHENTICATION|id_token|uid_field'
+  done
+0
+0
+0
+0
+0

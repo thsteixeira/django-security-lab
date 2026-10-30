@@ -296,6 +296,19 @@ jobs:
             labs/post_14_password_reset/views_secure.py > rule_pr_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_pr_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
+      # Lab 17 (OAuth2) — no tier distinguishes the pair. This taint rule keys on a
+      # user lookup whose email keyword is fed by a verified ID token's claims.
+      - name: OAuth2 identity rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/oauth2.yaml --json --quiet \
+            labs/post_17_oauth2/views_vulnerable.py > rule_oauth2_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_oauth2_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: OAuth2 identity rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/oauth2.yaml --json --quiet \
+            labs/post_17_oauth2/views_secure.py > rule_oauth2_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_oauth2_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
       # Lab 15 (MFA) — a policy rule, kept inside its lab because the policy (which
       # models need a second factor) belongs to that lab's code. Same two checks as
       # every rule above: its stem-paired fixture, then fire/silent on the pair.

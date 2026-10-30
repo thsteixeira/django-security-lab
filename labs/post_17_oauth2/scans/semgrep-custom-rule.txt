@@ -1,0 +1,101 @@
+# ============================================================================
+# SAST evidence - the custom rule rules/oauth2.yaml vs its fixture and Lab 17
+#
+# Commands:
+#   semgrep --test --config rules/oauth2.yaml rules/oauth2.py
+#   semgrep scan --config rules/oauth2.yaml labs/post_17_oauth2/views_vulnerable.py
+#   semgrep scan --config rules/oauth2.yaml labs/post_17_oauth2/views_secure.py
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-30
+# Result: the rule passes its fixture (1/1), FIRES on views_vulnerable.py:46
+#         (User.objects.filter(email__iexact=claims["email"])) and is SILENT on
+#         views_secure.py (Identity keyed on iss + sub). CI asserts the split in
+#         the hermetic custom-rules job.
+#         A JSON scan of the fixture flags lines 19, 34, 41 and 51 - exactly the
+#         four `ruleid` lines - and not the two `todoruleid` lines (71, 80: a
+#         preferred_username lookup and a userinfo-endpoint response), which are
+#         the rule's documented misses. `semgrep --test` does not check todo lines,
+#         so that JSON scan is what confirms them.
+#
+# Captured in a python:3.13-slim container (pip install semgrep==1.170.0, the
+# CI pin) with the repository mounted read-only. The rule id prints with a
+# "rules." prefix because the config is given by path. Output below is unedited.
+# ============================================================================
+
+$ semgrep --test --config rules/oauth2.yaml rules/oauth2.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file with 1 Code rule:
+  Scanning 1 file.
+1/1: ✓ All tests passed
+No tests for fixes found.
+
+$ semgrep scan --config rules/oauth2.yaml labs/post_17_oauth2/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                           
+    labs/post_17_oauth2/views_vulnerable.py
+   ❯❯❱ rules.thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+          ❰❰ Blocking ❱❱
+          A local account is looked up by the email claim of an ID token. Email is a profile field at the     
+          identity provider: it can be changed, reassigned, or set by the account holder without proof, so any
+          provider account that carries the victim's address signs in as the victim (OpenID Connect Core 5.7: 
+          email "MUST NOT be used as unique identifiers"). Find the account through a stored link keyed on the
+          token's iss and sub, the only stable, unique pair, and create that link only for a user who is      
+          already signed in. A new (iss, sub) is a new person: send it to sign-up, never into an existing     
+          account.                                                                                            
+                                                                                                              
+           46┆ user = User.objects.filter(email__iexact=claims["email"]).first()
+
+
+$ semgrep scan --config rules/oauth2.yaml labs/post_17_oauth2/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
