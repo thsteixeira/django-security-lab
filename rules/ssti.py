@@ -3,11 +3,11 @@
 
 It mirrors Lab 03's two views: compiling a Template from user input is the bug;
 passing user input as context data to a fixed-literal template is the fix. The
-Jinja2 from_string() variant is the Pattern 2 (RCE) case from the post. A
+Jinja2 from_string() variant is the RCE case the post names. A
 literal held in a variable is cleared by Semgrep's constant propagation (ok).
 The two todook cases are the rule's false positives: a template file the
-project ships, safe for a reason outside the code, and the post's sandboxed
-Jinja2 fix, whose environment the rule cannot see.
+project ships, safe for a reason outside the code, and a sandboxed Jinja2
+environment, which the rule cannot see.
 """
 from pathlib import Path
 
@@ -59,7 +59,7 @@ def shipped_file():
 
 
 def sandboxed_jinja(request):
-    # The post's Pattern 2 fix. The rule cannot tell _sandbox from a plain
+    # A sandboxed Jinja2 environment. The rule cannot tell _sandbox from a plain
     # Environment - a known false positive, hence todook.
     body = request.POST.get("body", "")
     # todook: thiagoteixeira.django.security.ssti.template-from-user-input

@@ -65,7 +65,7 @@ positive, documented in the fixture as `todook` (checked with Semgrep 1.170.0 on
 `Template(template_string=t)` and `template.Template(t)` slip past
 `Template($X)` (checked with Semgrep 1.170.0 on 2026-10-22). And it cannot
 tell a sandboxed Jinja2 environment from a plain one: `_sandbox.from_string(body)`,
-the post's Pattern 2 fix, is flagged as loudly as the bug, as is any unrelated
+a sandboxed call, is flagged as loudly as the bug, as is any unrelated
 `.from_string()` method called on a variable.
 
 ## Why no DAST here

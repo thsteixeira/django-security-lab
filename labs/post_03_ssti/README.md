@@ -30,7 +30,7 @@ This is the **DTL** case, and deliberately so. Django's template language does
 not evaluate Python expressions — `{{7*7}}` raises `TemplateSyntaxError` at parse
 time — so there is **no RCE here**. SSTI in DTL is *context disclosure* (and
 template-tag invocation), which is exactly the boundary the post draws. The RCE
-version needs a Jinja2 backend (Pattern 2 in the post), which this lab does not
+version needs a Jinja2 backend (named in the post), which this lab does not
 ship.
 
 ## Run it

@@ -39,7 +39,7 @@ rules:
     # false positive. It also matches only the call shapes it names:
     # Template(t, engine=e), Template(template_string=t) and template.Template(t)
     # slip past Template($X). And it cannot tell a sandboxed Jinja2 environment
-    # from a plain one: `_sandbox.from_string(body)` - the post's Pattern 2 fix -
+    # from a plain one: `_sandbox.from_string(body)` - a sandboxed call -
     # is flagged as loudly as the bug, as is any unrelated .from_string() method
     # called on a variable. The lab views compile inline, where this rule is
     # exact.
