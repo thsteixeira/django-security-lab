@@ -54,7 +54,7 @@ The repo's **sixth custom rule**. It flags an lxml parse that does not go throug
 bare `etree.fromstring/parse/XML` that passes no parser, positionally or as
 `parser=`, and so relies on lxml's version-dependent defaults.
 It stays silent on the `defusedxml.ElementTree` fix and on a hardened lxml parser
-passed via `parser=` (the post's Pattern 3 fix).
+passed via `parser=` (the post's Pattern 2 fix).
 
 ```bash
 semgrep scan --config rules/xxe.yaml labs/post_05_xxe/views_vulnerable.py  # 1 finding

@@ -87,6 +87,10 @@ Or prove all of it in one command (from the repo root):
 docker compose run --rm web python manage.py test labs.post_05_xxe
 ```
 
+The post teaches one attack, the file read through an external entity. The
+entity-expansion (Billion Laughs) test stays as a regression check on the secure
+view, outside the post's focus.
+
 ## The fix
 
 Never parse untrusted XML with a stock parser. Route every parse through

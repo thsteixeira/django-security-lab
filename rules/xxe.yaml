@@ -40,7 +40,7 @@ rules:
     # parse relying on implicit defaults - any etree.fromstring/parse/XML call that
     # passes no parser, positionally or as parser=, whatever other keywords it
     # passes (base_url=...) - and is silent when the parse goes through defusedxml
-    # or is handed a parser (the post's Pattern 3 hardened-parser fix).
+    # or is handed a parser (the post's Pattern 2 hardened-parser fix).
     #
     # Known limits (documented in rules/xxe.py): it is name-based (keys on an `etree`
     # receiver, so `import defusedxml.ElementTree as etree` is a false positive, todook
