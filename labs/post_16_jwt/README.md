@@ -183,6 +183,10 @@ someone builds an access-token denylist.
 into your own project: it fails on a default install and passes once
 `CHECK_REVOKE_TOKEN` is on.
 
+The post teaches one attack, the access token that outlives logout. The
+forged-token export pair and its tests stay as regression checks on signature
+verification, outside the post's focus.
+
 ## Isolation
 
 - **Brute force is out of scope** — `/jwt/token/` is a password form with no throttle. That is Lab 11's class.
