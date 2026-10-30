@@ -197,6 +197,10 @@ docker compose run --rm web python manage.py test labs.post_14_password_reset
 # OK
 ```
 
+The post teaches one attack, the stored token that nothing expires or retires.
+The host-header and enumeration tests stay as regression checks, outside the
+post's focus.
+
 `test_a_leaked_year_old_token_still_takes_over_the_account` is the one that
 matters. It fails the moment `views_vulnerable.confirm` starts reading either of
 the two columns it already writes.
