@@ -24,7 +24,7 @@ $ bandit -r labs/post_17_oauth2/
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.15
-Run started:2026-10-30 18:33:50.746554+00:00
+Run started:2026-10-30 19:23:06.983647+00:00
 
 Test results:
 >> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'lab-client-secret-not-a-secret-never-deploy'
@@ -50,7 +50,7 @@ Test results:
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 534
+	Total lines of code: 560
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 

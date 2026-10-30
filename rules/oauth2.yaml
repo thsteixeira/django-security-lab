@@ -22,7 +22,7 @@ rules:
       asvs: "5.0.0 V10.5.2"
       confidence: MEDIUM
       references:
-        - https://thiagoteixeira.tech/series/secure-by-design/
+        - https://thiagoteixeira.tech/blog/oauth2-misimplementation-why-a-valid-id-token-can-still-log-in-the-wrong-person/
         - https://openid.net/specs/openid-connect-core-1_0.html#ClaimStability
     # Why this rule exists: no rule in any tier the series runs says anything about
     # which claim identifies a user. Empirically, against labs/post_17_oauth2 (see its
@@ -40,10 +40,15 @@ rules:
     # keyword: `Identity.objects.filter(issuer=claims["iss"], subject=claims["sub"])`
     # stays silent, and so does creating a user with `email=` (a write, not a lookup).
     #
-    # Known limits, marked in rules/oauth2.py: a lookup keyed on a username claim
-    # (`preferred_username`), and claims fetched from a userinfo endpoint rather than
-    # an ID token, are the same mistake and are not flagged (todoruleid). A lookup
-    # behind an `email_verified` check IS flagged, on purpose.
+    # Known limits, marked in rules/oauth2.py. Not flagged (todoruleid): a lookup keyed
+    # on a username claim (`preferred_username`); claims fetched from a userinfo
+    # endpoint rather than an ID token; the email inside a Q() object or an
+    # `email__in` list; and a lookup through a queryset held in a variable, which is
+    # not the `$MODEL.objects...` shape. Flagged although harmless (todook): a sign-up
+    # check that only asks whether the address is taken, and a lookup pinned to the
+    # signed-in user's own pk. The sink is any email-keyed lookup, not one whose result
+    # is logged in, so it reports where the claim meets the query and leaves the rest
+    # to the reviewer. A lookup behind an `email_verified` check IS flagged, on purpose.
     pattern-sources:
       - pattern-either:
           - pattern: jwt.decode(...)

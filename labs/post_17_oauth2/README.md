@@ -1,7 +1,7 @@
 # Lab 17 — OAuth2 Misimplementation
 
-Companion lab for the blog post on OAuth2 misimplementation in Django (Post 17 of
-the Secure by Design series; link added on publication).
+Companion lab for the blog post
+**[OAuth2 Misimplementation: Why a Valid ID Token Can Still Log In the Wrong Person](https://thiagoteixeira.tech/blog/oauth2-misimplementation-why-a-valid-id-token-can-still-log-in-the-wrong-person/)**.
 
 | | |
 |---|---|
@@ -37,8 +37,8 @@ authenticates bob with bob's password and signs a true statement about bob's acc
 the callback reads the address, finds alice's row, and logs bob in as alice.
 
 The secure callback finds accounts only through an `Identity` row keyed on `iss` and
-`sub`, and those rows exist only where a user who was already signed in with their
-password connected the provider account to their own. bob's `(iss, sub)` was never
+`sub`, and those rows exist only where a signed-in user, asked for their password
+again, connected the provider account to their own. bob's `(iss, sub)` was never
 connected to anything: 403.
 
 ## The cast and the provider
@@ -58,8 +58,9 @@ authorize URL replaces the provider's sign-in page, and the token endpoint is a
 function call rather than HTTP.
 
 [`idp.py`](idp.py) is the client every flow uses. [`views_connect.py`](views_connect.py)
-is "connect your provider account" for a signed-in user, and the account page: the
-same in both worlds, and the only place an `Identity` row is created.
+is "connect your provider account" for a signed-in user who enters their password
+again, and the account page: the same in both worlds, and the only place an
+`Identity` row is created.
 
 ## Run it
 
@@ -94,7 +95,14 @@ curl -s -b bob.txt -c bob.txt "$CALLBACK"
 curl -s -b bob.txt $BASE/oauth2/account/
 # <h1>alice's account</h1><p>recovery codes: FLAG{oauth2_account_matched_on_email_claim}</p>
 
-# 4. The same sign-in on the secure login.
+# 4. He cannot carry it into the secure login: linking his provider account to alice's
+#    asks for her password, and a session alone is not enough.
+curl -s -w 'HTTP %{http_code}
+' -b bob.txt -X POST $BASE/oauth2/connect/
+# Enter your password to connect a provider account.
+# HTTP 403
+
+# 5. The same sign-in on the secure login.
 AUTHZ=$(curl -s -c bob2.txt -o /dev/null -w '%{redirect_url}' $BASE/oauth2/secure/login/)
 CALLBACK=$(curl -s -b bob2.txt -o /dev/null -w '%{redirect_url}' "$AUTHZ&as=bob")
 curl -s -w 'HTTP %{http_code}\n' -b bob2.txt -c bob2.txt "$CALLBACK"
@@ -102,13 +110,13 @@ curl -s -w 'HTTP %{http_code}\n' -b bob2.txt -c bob2.txt "$CALLBACK"
 # HTTP 403
 ```
 
-Now the secure login doing its job. alice signs in with her password, connects her own
-provider account, and from then on can sign in with the provider:
+Now the secure login doing its job. alice signs in with her password, enters it again
+to connect her own provider account, and from then on can sign in with the provider:
 
 ```bash
 curl -s -c alice.txt -d 'username=alice&password=labpass' $BASE/accounts/login/
 # logged in as alice
-AUTHZ=$(curl -s -b alice.txt -c alice.txt -o /dev/null -w '%{redirect_url}' $BASE/oauth2/connect/)
+AUTHZ=$(curl -s -b alice.txt -c alice.txt -o /dev/null -w '%{redirect_url}' -d password=labpass $BASE/oauth2/connect/)
 CALLBACK=$(curl -s -b alice.txt -o /dev/null -w '%{redirect_url}' "$AUTHZ&as=alice")
 curl -s -b alice.txt -c alice.txt "$CALLBACK"
 # connected provider subject 248289761001 to alice
@@ -126,7 +134,7 @@ the connected identities and any user the vulnerable callback created, and repea
 
 ```bash
 docker compose run --rm web python manage.py test labs.post_17_oauth2
-# Ran 12 tests in 4.179s
+# Ran 13 tests in 5.484s
 #
 # OK
 ```
@@ -137,15 +145,18 @@ provider sign-in, logged in as alice by one callback and refused by the other.
 `test_secure_ignores_even_a_verified_email_nobody_connected` is the stricter half of
 the fix: alice's own provider account, with a verified address, opens nothing until
 she connects it. `test_alice_connects_her_provider_account_and_signs_in_with_it` shows
-the secure callback still does its job. Make the secure callback look the user up by
-email and three tests fail.
+the secure callback still does its job, and `test_connect_asks_for_the_password_again`
+shows that bob, holding alice's session from the vulnerable callback, cannot link his
+provider account to her. Make the secure callback look the user up by email and four
+tests fail; drop the password check from the connect view and the last one fails.
 
 ## Isolation
 
 - **`state` is checked on every flow**, and the connect flow cannot be finished in someone else's session (`test_connect_cannot_be_finished_in_someone_elses_session`). Callback CSRF is not this lab's class.
+- **Linking asks for the password again** — the connect view is shared by both worlds, so without it the session the vulnerable callback hands bob would let him link his provider account to alice and walk in through the secure callback too (`test_connect_asks_for_the_password_again`).
 - **The ID token is checked properly** — `idp.verify_id_token()` names the audience and the issuer and requires `iss`, `sub`, `aud`, `exp` and `iat`, so a token issued to another client is refused. Token substitution is not this lab's class.
 - **The provider's OAuth half is correct** — exact `redirect_uri` matching, single-use codes bound to their redirect URI.
-- **No open redirect** — no flow carries a `next` parameter. **Output is escaped** (not XSS, Lab 02). Global CSRF is off as in every lab (B1); every flow here is a GET carrying its own `state`.
+- **No open redirect** — no flow carries a `next` parameter. **Output is escaped** (not XSS, Lab 02). Global CSRF is off as in every lab (B1); every sign-in flow here is a GET carrying its own `state`, and the one POST, starting a connect, needs the password.
 
 ## Scanning it
 

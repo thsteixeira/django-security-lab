@@ -36,9 +36,13 @@ class OAuth2LabTests(TestCase):
 
     # helpers -----------------------------------------------------------------
 
-    def callback_url(self, client, start, as_user):
-        """Start a flow, sign in at the provider, and return the callback URL."""
-        start_resp = client.get(start)
+    def callback_url(self, client, start, as_user, password=None):
+        """Start a flow, sign in at the provider, and return the callback URL. The
+        connect flow starts with a POST carrying the user's password."""
+        if password is None:
+            start_resp = client.get(start)
+        else:
+            start_resp = client.post(start, {"password": password})
         self.assertEqual(start_resp.status_code, 302)
         provider_resp = client.get(f"{start_resp['Location']}&as={as_user}")
         self.assertEqual(provider_resp.status_code, 302, provider_resp.content)
@@ -80,7 +84,7 @@ class OAuth2LabTests(TestCase):
     def test_alice_connects_her_provider_account_and_signs_in_with_it(self):
         alice = Client()
         alice.login(username="alice", password=PASSWORD)
-        connected = alice.get(self.callback_url(alice, CONNECT, "alice"))
+        connected = alice.get(self.callback_url(alice, CONNECT, "alice", PASSWORD))
         self.assertContains(connected, "to alice")
 
         fresh = Client()
@@ -91,7 +95,7 @@ class OAuth2LabTests(TestCase):
     def test_and_a_changed_email_does_not_move_her_identity(self):
         alice = Client()
         alice.login(username="alice", password=PASSWORD)
-        alice.get(self.callback_url(alice, CONNECT, "alice"))
+        alice.get(self.callback_url(alice, CONNECT, "alice", PASSWORD))
         Client().get(PROFILE, {"as": "alice", "email": "alice@new-employer.test"})
         resp = self.sign_in_with_provider(Client(), SECURE_LOGIN, "alice")
         self.assertContains(resp, "logged in as alice")
@@ -110,10 +114,24 @@ class OAuth2LabTests(TestCase):
         bob.login(username="bob", password=PASSWORD)
         alice = Client()
         alice.login(username="alice", password=PASSWORD)
-        alice.get(CONNECT)  # alice has a connect flow of her own open
-        resp = alice.get(self.callback_url(bob, CONNECT, "bob"))
+        alice.post(CONNECT, {"password": PASSWORD})  # alice has a connect flow of her own open
+        resp = alice.get(self.callback_url(bob, CONNECT, "bob", PASSWORD))
         self.assertEqual(resp.status_code, 400)
         self.assertFalse(Identity.objects.exists())
+
+    def test_connect_asks_for_the_password_again(self):
+        """A session alone links nothing. bob, holding alice's session from the
+        vulnerable callback, cannot connect his provider account to her and so cannot
+        carry the takeover into the secure callback."""
+        self.bob_claims_alices_email()
+        bob = Client()
+        self.sign_in_with_provider(bob, VULN_LOGIN, "bob")  # bob is in alice's session
+        self.assertEqual(bob.get(CONNECT).status_code, 405)
+        self.assertEqual(bob.post(CONNECT).status_code, 403)
+        self.assertEqual(bob.post(CONNECT, {"password": PASSWORD + "-guess"}).status_code, 403)
+        self.assertFalse(Identity.objects.exists())
+        resp = self.sign_in_with_provider(Client(), SECURE_LOGIN, "bob")
+        self.assertEqual(resp.status_code, 403)
 
     def test_an_id_token_for_another_client_is_refused(self):
         token = jwt.encode(

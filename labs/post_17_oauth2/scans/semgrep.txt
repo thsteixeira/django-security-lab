@@ -21,7 +21,7 @@
 #         Registry tier: 7 from 372 rules - the same two, plus
 #         direct-use-of-httpresponse x5, which lands on BOTH callbacks alike
 #         (views_vulnerable.py L50, views_secure.py L47), on views_connect.py
-#         (L40, L49) and on provider.py (L99): the labs' inline-HTML convention,
+#         (L50, L59) and on provider.py (L99): the labs' inline-HTML convention,
 #         no signal about the pair.
 #         Rule definitions: none of the five configs mentions email_verified, an
 #         email claim, email__iexact, preferred_username, allauth, social_core,
@@ -42,11 +42,11 @@ $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs
 ┌─────────────┐
 │ Scan Status │
 └─────────────┘
-  Scanning 14 files tracked by git with 565 Code rules:
+  Scanning 18 files tracked by git with 565 Code rules:
                                                                                                                         
   Language      Rules   Files          Origin      Rules                                                                
  ─────────────────────────────        ───────────────────                                                               
-  <multilang>       5      14          Community     565                                                                
+  <multilang>       5      18          Community     565                                                                
   python          151      13                                                                                           
                                                                                                                         
                 
@@ -57,10 +57,10 @@ $ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs
 ✅ Scan completed successfully.
  • Findings: 2 (2 blocking)
  • Rules run: 156
- • Targets scanned: 14
+ • Targets scanned: 18
  • Parsed lines: ~100.0%
  • No ignore information available
-Ran 156 rules on 14 files: 2 findings.
+Ran 156 rules on 18 files: 2 findings.
 
 A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                    
@@ -115,11 +115,11 @@ $ semgrep scan --config r/python.django --config r/python labs/post_17_oauth2/
 ┌─────────────┐
 │ Scan Status │
 └─────────────┘
-  Scanning 14 files tracked by git with 378 Code rules:
+  Scanning 18 files tracked by git with 378 Code rules:
                                                                                                                         
   Language      Rules   Files          Origin      Rules                                                                
  ─────────────────────────────        ───────────────────                                                               
-  <multilang>       3      14          Community     378                                                                
+  <multilang>       3      18          Community     378                                                                
   python          369      13                                                                                           
                                                                                                                         
                 
@@ -130,10 +130,10 @@ $ semgrep scan --config r/python.django --config r/python labs/post_17_oauth2/
 ✅ Scan completed successfully.
  • Findings: 7 (7 blocking)
  • Rules run: 372
- • Targets scanned: 14
+ • Targets scanned: 18
  • Parsed lines: ~100.0%
  • No ignore information available
-Ran 372 rules on 14 files: 7 findings.
+Ran 372 rules on 18 files: 7 findings.
 
 A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
                    
@@ -201,12 +201,12 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
           vulnerability. Use Django's template engine to safely render HTML.                          
           Details: https://sg.run/EknN                                                                
                                                                                                       
-           40┆ return HttpResponse(
-           41┆     f"connected provider subject {escape(claims['sub'])} to
+           50┆ return HttpResponse(
+           51┆     f"connected provider subject {escape(claims['sub'])} to
                {escape(request.user.username)}\n"                         
-           42┆ )
+           52┆ )
             ⋮┆----------------------------------------
-           49┆ return HttpResponse(f"<h1>{escape(request.user.username)}'s account</h1>{body}")
+           59┆ return HttpResponse(f"<h1>{escape(request.user.username)}'s account</h1>{body}")
                                        
     labs/post_17_oauth2/views_secure.py
     ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
@@ -229,9 +229,7 @@ A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
            50┆ return HttpResponse(f"logged in as {escape(user.username)}\n")
 
 
-$ for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
-    curl -sL "https://semgrep.dev/c/$c" | grep -ciE 'email_verified|\["email"\]|email__iexact|preferred_username|allauth|social_core|associate_by_email|EMAIL_AUTHENTICATION|id_token|uid_field'
-  done
+$ for c in p/django p/python p/owasp-top-ten r/python.django r/python; do curl -sL "https://semgrep.dev/c/$c" | grep -ciE 'email_verified|\["email"\]|email__iexact|preferred_username|allauth|social_core|associate_by_email|EMAIL_AUTHENTICATION|id_token|uid_field'; done
 0
 0
 0

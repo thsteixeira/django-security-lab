@@ -16,9 +16,9 @@ host, as `semgrep.txt`'s header says.
 
 ```bash
 semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_17_oauth2/
-# Ran 156 rules on 14 files: 2 findings.
+# Ran 156 rules on 18 files: 2 findings.
 semgrep scan --config r/python.django --config r/python labs/post_17_oauth2/
-# Ran 372 rules on 14 files: 7 findings.
+# Ran 372 rules on 18 files: 7 findings.
 bandit -r labs/post_17_oauth2/
 # 2 issues, both B105 in provider.py
 ```
@@ -27,7 +27,7 @@ bandit -r labs/post_17_oauth2/
 |---|---|---|
 | Semgrep `open-redirect` | `provider.py` L67 (the authorize view) | no — a false positive. The view refuses any `redirect_uri` that is not in an exact allowlist before it redirects, but the rule is a syntactic pattern whose only exemptions are a call to `is_safe_url()` or `url_has_allowed_host_and_scheme()` in the same function, so a membership check does not count |
 | Semgrep `jwt-python-hardcoded-secret` | `provider.py` L118 | fair, and intended: the in-lab provider signs ID tokens with a client secret committed to the repo, which is never deployed |
-| Semgrep `direct-use-of-httpresponse` (registry only) | both callbacks (`views_vulnerable.py` L50, `views_secure.py` L47), `views_connect.py` L40 and L49, `provider.py` L99 | no — the labs' inline-HTML convention (Lab 02's class), the same on both sides of the pair |
+| Semgrep `direct-use-of-httpresponse` (registry only) | both callbacks (`views_vulnerable.py` L50, `views_secure.py` L47), `views_connect.py` L50 and L59, `provider.py` L99 | no — the labs' inline-HTML convention (Lab 02's class), the same on both sides of the pair |
 | Bandit `B105` | `provider.py` L44 | the committed client secret — fair, as above |
 | Bandit `B105` | `provider.py` L133 | no — `"token_type": "Bearer"`: B105 matches the word `token` in a dictionary key and reports the constant beside it |
 
@@ -44,8 +44,8 @@ draws nothing from any of them, and neither does its fix on `views_secure.py`.
 The defect is not a dangerous call. It is an ordinary ORM lookup whose value happens
 to come from the `email` claim of an ID token that was verified correctly, and a rule
 would have to know that this claim, among all the token's claims, must not identify a
-person. Grepping the rule definitions of all five configs for the terms such a rule
-would have to contain:
+person. Grepping the rule definitions of all five configs for the terms a rule about
+this would most likely use:
 
 ```bash
 for c in p/django p/python p/owasp-top-ten r/python.django r/python; do
@@ -97,11 +97,21 @@ identifier is still a reassignable address.
 
 **What it misses** (marked `todoruleid` in [`rules/oauth2.py`](../../../rules/oauth2.py)):
 a lookup keyed on a username claim (`username=claims["preferred_username"]`), which is
-the same mistake outside the rule's email scope, and claims fetched from a userinfo
-endpoint (`requests.get(...).json()["email"]`), which is not a source the rule knows.
+the same mistake outside the rule's email scope; claims fetched from a userinfo
+endpoint (`requests.get(...).json()["email"]`), which is not a source the rule knows;
+the email inside a `Q()` object or an `email__in` list; and a lookup through a queryset
+held in a variable (`users = User.objects.all()`, then `users.filter(...)`), which is
+not the `$MODEL.objects...` shape the sink matches.
+
+**What it flags although it is harmless** (marked `todook`): a sign-up check that only
+asks whether the address is taken (`.filter(email__iexact=...).exists()`), and a lookup
+pinned to the signed-in user's own `pk`. The sink is any email-keyed lookup, not one
+whose result is logged in, so the rule reports where the claim meets the query and
+leaves the rest to the reviewer.
+
 `semgrep --test` does not check `todo` lines, so a JSON scan of the fixture confirms
-them: it flags lines 19, 34, 41 and 51, exactly the four `ruleid` lines, and not
-lines 71 or 80.
+them: it flags lines 20, 35, 42 and 52 (the four `ruleid` lines) and 111 and 118 (the
+two `todook` lines), and none of the five `todoruleid` lines (72, 81, 88, 95, 103).
 
 **What it cannot see at all:** the same mistake made in settings rather than code —
 django-allauth's `SOCIALACCOUNT_EMAIL_AUTHENTICATION` with `VERIFIED_EMAIL`, an

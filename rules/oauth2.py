@@ -7,6 +7,7 @@
 import jwt
 import requests
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 from . import idp
 from .models import Identity
@@ -78,3 +79,40 @@ def from_the_userinfo_endpoint(access_token):
                            headers={"Authorization": f"Bearer {access_token}"}, timeout=5).json()
     # todoruleid: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
     return User.objects.get(email=profile["email"])
+
+
+def inside_a_q_object(id_token, key):
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience="client")
+    # Same lookup, but the email is an argument of Q(), not a keyword of filter().
+    # todoruleid: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    return User.objects.filter(Q(email__iexact=claims["email"])).first()
+
+
+def inside_an_in_list(id_token, key):
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience="client")
+    # `email__in` is outside the keyword regex.
+    # todoruleid: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    return User.objects.filter(email__in=[claims["email"]]).first()
+
+
+def through_a_queryset_variable(id_token, key):
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience="client")
+    users = User.objects.all()
+    # The receiver is a variable, not `$MODEL.objects`.
+    # todoruleid: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    return users.filter(email__iexact=claims["email"]).first()
+
+
+def signup_asks_whether_the_address_is_taken(id_token, key):
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience="client")
+    # Only asks whether the address is in use, to send the user to "sign in and
+    # connect"; nobody is logged in by it. The rule cannot tell.
+    # todook: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    return User.objects.filter(email__iexact=claims["email"]).exists()
+
+
+def pinned_to_the_signed_in_user(request, id_token, key):
+    claims = jwt.decode(id_token, key, algorithms=["RS256"], audience="client")
+    # The pk fixes whose row this is; the email cannot choose another user.
+    # todook: thiagoteixeira.django.security.oauth2.account-found-by-email-claim
+    return User.objects.filter(pk=request.user.pk, email__iexact=claims["email"]).exists()
