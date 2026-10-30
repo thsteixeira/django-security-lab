@@ -12,8 +12,8 @@ catching it skips Django's django.security log, so real code logs it itself.
     ?file=readme.txt    -> stays inside DOCS_ROOT -> the document is served
 
 `safe_join` is the post's headline defence. (It normalizes lexically, not
-symlink-aware; for a media root that can hold attacker-created symlinks the post
-shows the Path.resolve()/is_relative_to() variant. This lab's root holds only
+symlink-aware; for a media root that can hold attacker-created symlinks, use the
+Path.resolve()/is_relative_to() variant instead. This lab's root holds only
 inert seeded files, so safe_join is the right primitive.)
 """
 from django.core.exceptions import SuspiciousFileOperation

@@ -53,7 +53,7 @@ rules:
     # The sinks are open()'s path and a path whose .open(), .read_bytes() or
     # .read_text() is called. The sanitizers are safe_join(), a record lookup
     # (get_object_or_404, Model.objects...; without it a FileField's
-    # doc.file.open() would fire) and a containment check of the post's shape:
+    # doc.file.open() would fire) and a containment check of this shape:
     # p = (...).resolve(), then `if not p.is_relative_to(base):` ending in raise
     # or return. The resolve() is required: is_relative_to() is lexical, so an
     # unresolved base / "../flag.txt" passes it and must still fire. Taint flows

@@ -118,7 +118,7 @@ Template("{{ message }}").render(Context({"message": user_input}))
 ```
 
 If a feature genuinely needs user-authored template logic, that is the one case
-for `jinja2.sandbox.SandboxedEnvironment` with a minimal context — see the post.
+for `jinja2.sandbox.SandboxedEnvironment` with a minimal context.
 The invariant: **a template is a file you control, not a string a user sends you.**
 
 ## Isolation

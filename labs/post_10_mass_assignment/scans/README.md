@@ -66,7 +66,7 @@ empty `exclude`, `modelform_factory(..., fields="__all__")`. A non-empty
 and the rule flags a django-filter `FilterSet` Meta with `fields = "__all__"`,
 which lists filters rather than writable fields (a `# todook`). By design it also
 misses an explicit list that names one field too many and a `**request.data`
-splat, since neither says "all" (the post's Patterns 2 and 3).
+splat, since neither says "all".
 
 ## DAST
 

@@ -1,6 +1,6 @@
 # Captured scan evidence — Lab 12 (Session Fixation)
 
-These are the **real, unedited runs** behind the post's detection section. Each
+These are the **real, unedited runs** of the lab's detection pass. Each
 file starts with a header giving the exact command, tool version, and capture date.
 
 | File | Tool | Kind | In CI? | What it shows |
@@ -11,8 +11,9 @@ file starts with a header giving the exact command, tool version, and capture da
 
 ## Why the SAST tools miss this — and why no custom rule ships
 
-Session fixation is a hard case for the standard tools, because there are
-**two** flaws and neither is a dangerous call:
+Session fixation is a hard case for the standard tools, because the lab carries
+**two** flaws and neither is a dangerous call. The post teaches the first; the
+second, the cookie setting, stays here as the lab's deployment check:
 
 1. **The rotation flaw is the *absence* of a call.** The vulnerable view fails by
    *not* calling `login()`/`cycle_key()`. A static rule can flag a dangerous call;
