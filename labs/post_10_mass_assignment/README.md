@@ -95,6 +95,10 @@ Or prove all of it in one command (from the repo root):
 docker compose run --rm web python manage.py test labs.post_10_mass_assignment
 ```
 
+The post teaches one attack, forging the order's state. The two `owner`
+reassignment tests stay as regression checks on the secure serializer, outside
+the post's focus.
+
 ## The fix
 
 Never let a serializer or form bind columns the client has no business writing.
