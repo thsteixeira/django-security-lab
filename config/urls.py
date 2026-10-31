@@ -57,6 +57,11 @@ def index(request):
         "with the provider (add &amp;as=bob) at /oauth2/vulnerable/login/ and "
         "/oauth2/secure/login/, and read /oauth2/account/ &mdash; the vulnerable "
         "callback finds the account by email</li>"
+        "<li>/hashing/vulnerable/register/ and /hashing/secure/register/ (POST "
+        "username=...&amp;password=...), then dump the table (manage.py "
+        "dump_password_table), crack it offline with "
+        "labs/post_18_password_hashing/crack.py, log in as carla at "
+        "/hashing/vulnerable/login/ and read /hashing/note/</li>"
         "</ul>"
     )
 
@@ -82,4 +87,5 @@ urlpatterns = [
     path("mfa/", include("labs.post_15_mfa.urls")),
     path("jwt/", include("labs.post_16_jwt.urls")),
     path("oauth2/", include("labs.post_17_oauth2.urls")),
+    path("hashing/", include("labs.post_18_password_hashing.urls")),
 ]

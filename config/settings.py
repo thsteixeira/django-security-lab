@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "labs.post_15_mfa",
     "labs.post_16_jwt",
     "labs.post_17_oauth2",
+    "labs.post_18_password_hashing",
 ]
 
 # B1 — the auth/session stack. CSRF is DELIBERATELY NOT global: CsrfViewMiddleware
@@ -86,6 +87,23 @@ MIDDLEWARE = [
 # than setting it here — a global setting would have silently applied this lab's
 # 15-character floor to every other lab. See CONTRIBUTING.md, "Settings are
 # global; lab behaviour should not be."
+
+# B13 — the password hasher list, introduced with Lab 18. Django's own default
+# list, unchanged and in its order, plus one hasher at the end: PBKDF2 run over a
+# legacy SHA-1 digest, so the rows Lab 18's wrap migration converts can still be
+# checked. A global setting on purpose — the list IS the lesson (see
+# CONTRIBUTING.md, "Settings are global; lab behaviour should not be"): new
+# passwords still go to the first entry, and the extra hasher is consulted only
+# for a stored value that starts with `pbkdf2_wrapped_sha1$`, which no other lab
+# writes. Lab 18's tests assert the first five entries equal Django's default.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+    "labs.post_18_password_hashing.hashers.PBKDF2WrappedSHA1PasswordHasher",
+]
 
 # Lab 14 sends a password-reset email, and the link inside it *is* the thing under
 # study — so mail has to go somewhere a reader can read. The console backend prints
