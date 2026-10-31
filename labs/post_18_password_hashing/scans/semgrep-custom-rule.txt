@@ -1,0 +1,278 @@
+# ============================================================================
+# SAST evidence - the custom rule rules/password_hashing.yaml vs its fixture and Lab 18
+#
+# Commands:
+#   semgrep --test --config rules/password_hashing.yaml rules/password_hashing.py
+#   semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/<file>
+#     for views_vulnerable.py, views_secure.py, backends.py, hashers.py, wrap.py
+#   semgrep scan --config rules/password_hashing.yaml labs/
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-31
+# Result: the rule passes its fixture (1/1), FIRES on views_vulnerable.py:45
+#         (user.password = hashlib.sha1(...).hexdigest()) and is SILENT on
+#         views_secure.py (set_password()). It also fires on backends.py:24 (the
+#         SHA1Backend comparison, the same mistake's login half) and stays silent
+#         on hashers.py and wrap.py, the fix that wraps the old digests in PBKDF2.
+#         Over every lab (218 files) it reports 3 findings, all in Lab 18:
+#         views_vulnerable.py:45, backends.py:24 and seed.py:44 (the seed writes
+#         the legacy rows exactly as the vulnerable view does). CI asserts the
+#         split in the hermetic custom-rules job.
+#         A JSON scan of the fixture flags lines 23, 36, 48, 53, 59, 64, 70, 77, 82
+#         and 87 - exactly the ten `ruleid` lines - plus 147, the one `todook`
+#         line (an API-key digest in a field named password), and none of the four
+#         `todoruleid` lines (122, 129, 134, 140: another field name, raw SQL,
+#         passlib's md5_crypt, a one-iteration pbkdf2_hmac). `semgrep --test` does
+#         not check todo lines, so that JSON scan is what confirms them.
+#
+# Captured in a python:3.13-slim container (pip install semgrep==1.170.0, the
+# CI pin) with the repository mounted read-only. The rule id prints with a
+# "rules." prefix because the config is given by path. Output below is unedited.
+# ============================================================================
+
+$ semgrep --test --config rules/password_hashing.yaml rules/password_hashing.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file with 1 Code rule:
+  Scanning 1 file.
+1/1: ✓ All tests passed
+No tests for fixes found.
+
+$ semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/views_vulnerable.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                                     
+    labs/post_18_password_hashing/views_vulnerable.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.sha1(password.encode()).hexdigest()
+
+
+$ semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/views_secure.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/backends.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 1 finding.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                             
+    labs/post_18_password_hashing/backends.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           24┆ if user and user.password == hashlib.sha1(password.encode()).hexdigest():
+
+
+$ semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/hashers.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep scan --config rules/password_hashing.yaml labs/post_18_password_hashing/wrap.py
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 1 file tracked by git with 1 Code rule:
+  Scanning 1 file.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 1
+ • Targets scanned: 1
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 1 file: 0 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/
+
+$ semgrep scan --config rules/password_hashing.yaml labs/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 465 files tracked by git with 1 Code rule:
+  Scanning 218 files.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 3 (3 blocking)
+ • Rules run: 1
+ • Targets scanned: 218
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 218 files: 3 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 3 Code Findings │
+└─────────────────┘
+                                             
+    labs/post_18_password_hashing/backends.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           24┆ if user and user.password == hashlib.sha1(password.encode()).hexdigest():
+                                         
+    labs/post_18_password_hashing/seed.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           44┆ user.password = hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+                                                     
+    labs/post_18_password_hashing/views_vulnerable.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.sha1(password.encode()).hexdigest()
+

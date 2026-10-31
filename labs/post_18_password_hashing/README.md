@@ -7,9 +7,9 @@ Companion lab for the blog post
 |---|---|
 | **OWASP** | A04:2025 — Cryptographic Failures |
 | **CWE** | CWE-916 — Use of Password Hash With Insufficient Computational Effort · CWE-759 — Use of a One-Way Hash without a Salt |
-| **ASVS** | V2.4.1 — passwords stored in a form resistant to offline attacks, salted and hashed with an approved one-way key derivation or password hashing function |
+| **ASVS** | 5.0.0 V11.4.2 — passwords stored using an approved, computationally intensive key derivation function (4.0.3: V2.4.1 — passwords stored in a form resistant to offline attacks, salted and hashed with an approved one-way key derivation or password hashing function) |
 | **ATT&CK** | T1110.002 — Brute Force: Password Cracking |
-| **Detection** | *Captured in [`scans/`](scans/) once the module is committed.* |
+| **Detection** | **The standard tools flag the algorithm's name, not the defect.** Bandit's `B324` and Semgrep's `insecure-hash-algorithm-sha1` fire on the vulnerable line and not on `set_password()`, but they also fire on the fix's wrapped hasher, and the same line with `sha256`, `sha3_256` or `blake2b` draws nothing from either tool. No rule in any tier looks at where a password digest is stored. So the lab ships a **custom taint rule**, [`rules/password_hashing.yaml`](../../rules/password_hashing.yaml), that fires on the vulnerable view and is silent on the secure one, asserted in CI. See [`scans/`](scans/) |
 
 > ⚠️ Intentionally vulnerable. Run locally / in the provided Docker stack only. See [SECURITY.md](../../SECURITY.md).
 
@@ -217,4 +217,22 @@ which no other lab writes.
 
 ## Scanning it
 
-*Captured with the detection pass once the module is committed; see [`scans/`](scans/).*
+The write-up is in [`scans/README.md`](scans/README.md). The short version: as
+built, the standard tools tell the pair apart. Bandit's `B324` and Semgrep's
+`insecure-hash-algorithm-sha1` fire on `views_vulnerable.py:45` and say nothing
+about `set_password()`. But both are lists of algorithm names. They fire as readily
+on the fix's wrapped hasher (`hashers.py:28`) and on the cracker, and the same line
+with `hashlib.sha256` (the Semgrep rule's own autofix), `sha3_256` or `blake2b` draws
+nothing from either tool, although it cracks the same way. `usedforsecurity=False`,
+which Bandit's message suggests, silences Bandit as well. The only rules about
+passwords in the five Semgrep configs examine `set_password()`, so they fire on the
+fix: `use-none-for-password-default` on the secure view is a false positive, and the
+highest-severity finding of the run.
+
+[`rules/password_hashing.yaml`](../../rules/password_hashing.yaml) is a taint rule
+from any `hashlib` or `hmac` digest to a stored or compared `.password`, sanitised
+by `make_password()` and a hasher's `encode()`. It fires on line 45 whatever the
+algorithm, and on the `SHA1Backend` comparison; it is silent on the secure view and
+on the wrap. CI asserts that split. It does not see a weaker hasher chosen in
+settings (`MD5PasswordHasher` first in `PASSWORD_HASHERS`, lowered iterations),
+which is configuration, not dataflow.

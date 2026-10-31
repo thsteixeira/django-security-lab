@@ -1,0 +1,415 @@
+# ============================================================================
+# SAST evidence - Semgrep (community AND audit/registry tiers) vs Lab 18
+#
+# Commands:
+#   semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_18_password_hashing/
+#   semgrep scan --config r/python.django --config r/python              labs/post_18_password_hashing/
+#   a rule-definition grep of all five configs (the script is printed at the end)
+#
+# Tool: Semgrep 1.170.0  |  Captured: 2026-10-31
+# Result: FIRES ON THE VULNERABLE VIEW - FOR THE ALGORITHM'S NAME.
+#         Curated packs: 8 findings from 156 rules -
+#           - insecure-hash-algorithm-sha1 x7, the same seven sha1 calls Bandit's
+#             B324 hits, views_vulnerable.py:45 among them and hashers.py:28 (the
+#             fix's wrapped hasher) too. The rule is `pattern: hashlib.sha1(...)`;
+#             its message is about collision resistance, and its autofix rewrites
+#             sha1 to sha256, which silences it on a line exactly as crackable
+#             (fast-hash-variants.txt);
+#           - use-none-for-password-default (ERROR, the highest severity in the
+#             run) on views_SECURE.py:27, password = request.POST.get("password", ""),
+#             because the value reaches set_password(). A false positive here: line
+#             29 returns 400 for an empty password before set_password() runs.
+#         Registry tier: 19 from 372 rules - the same eight, plus
+#           - unvalidated-password on views_secure.py:35 and tests.py:165 (both
+#             set_password() calls; strength is Lab 13's subject);
+#           - no-csrf-exempt x3 and direct-use-of-httpresponse x4, on both views
+#             alike and the note page (the labs' CSRF-off and inline-HTML
+#             conventions);
+#           - use-defusedcsv on the leak command and is-function-without-
+#             parentheses on views_note.py:15 (request.user.is_authenticated is
+#             a property): no signal about the pair.
+#         Rule definitions: no rule in the five configs mentions `.password =`,
+#         make_password, PASSWORD_HASHERS, a PasswordHasher or check_password; the
+#         three that mention set_password (password-empty-string, use-none-for-
+#         password-default, unvalidated-password) examine the fix's call. Nothing
+#         looks at where a digest is stored, so the vulnerable line is caught only
+#         while it says "sha1" - the "they miss it" outcome, which warrants a
+#         custom rule: see semgrep-custom-rule.txt.
+#
+# Captured in a python:3.13-slim container (pip install semgrep==1.170.0, the CI
+# pin) with the repository mounted read-only; paths are relative to the repo
+# root. The rule-definition grep ran in the same container with Python's urllib
+# (the image has no curl). Output below is unedited.
+# ============================================================================
+
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten labs/post_18_password_hashing/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 21 files tracked by git with 565 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       5      21          Community     565                                                                
+  python          151      20                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 8 (8 blocking)
+ • Rules run: 156
+ • Targets scanned: 21
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 156 rules on 21 files: 8 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 8 Code Findings │
+└─────────────────┘
+                                             
+    labs/post_18_password_hashing/backends.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           24┆ if user and user.password == hashlib.sha1(password.encode()).hexdigest():
+                                          
+    labs/post_18_password_hashing/crack.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(guess.encode())
+           75┆ digest = hashlib.sha1(guess.encode()).hexdigest()
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ hashlib.sha256(guess.encode())
+           86┆ guess = hashlib.sha1(guess.encode()).hexdigest()
+                                            
+    labs/post_18_password_hashing/hashers.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           28┆ sha1_hash = hashlib.sha1(password.encode()).hexdigest()
+                                         
+    labs/post_18_password_hashing/seed.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(LEGACY_PASSWORD.encode())
+           44┆ user.password = hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+                                          
+    labs/post_18_password_hashing/tests.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(LEGACY_PASSWORD.encode())
+           63┆ self.password_of("mallory"), hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+                                                 
+    labs/post_18_password_hashing/views_secure.py
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'password' is using the empty string as its default and is being used to set the password on 'user'.
+          If you meant to set an unusable password, set the default value to 'None' or call                   
+          'set_unusable_password()'.                                                                          
+          Details: https://sg.run/zvBW                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ None
+           27┆ password = request.POST.get("password", "")
+                                                     
+    labs/post_18_password_hashing/views_vulnerable.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           45┆ user.password = hashlib.sha1(password.encode()).hexdigest()
+
+
+$ semgrep scan --config r/python.django --config r/python labs/post_18_password_hashing/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 21 files tracked by git with 378 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>       3      21          Community     378                                                                
+  python          369      20                                                                                           
+                                                                                                                        
+                    
+                    
+┌──────────────────┐
+│ 19 Code Findings │
+└──────────────────┘
+                                             
+    labs/post_18_password_hashing/backends.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           24┆ if user and user.password == hashlib.sha1(password.encode()).hexdigest():
+                                          
+    labs/post_18_password_hashing/crack.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(guess.encode())
+           75┆ digest = hashlib.sha1(guess.encode()).hexdigest()
+            ⋮┆----------------------------------------
+           ▶▶┆ Autofix ▶ hashlib.sha256(guess.encode())
+           86┆ guess = hashlib.sha1(guess.encode()).hexdigest()
+                                            
+    labs/post_18_password_hashing/hashers.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           28┆ sha1_hash = hashlib.sha1(password.encode()).hexdigest()
+                                                                            
+    labs/post_18_password_hashing/management/commands/dump_password_table.py
+     ❱ python.lang.security.use-defusedcsv.use-defusedcsv
+          ❰❰ Blocking ❱❱
+          Detected the generation of a CSV file using the built-in `csv` module. If user data is used to      
+          generate the data in this file, it is possible that an attacker could inject a formula when the CSV 
+          is imported into a spreadsheet application that runs an attacker script, which could steal data from
+          the importing user or, at worst, install malware on the user's computer. `defusedcsv` is a drop-in  
+          replacement with the same API that will attempt to mitigate formula injection attempts. You can use 
+          `defusedcsv` instead of `csv` to safely generate CSVs.                                              
+          Details: https://sg.run/GzRn                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ defusedcsv.writer(self.stdout, lineterminator="\n")
+           20┆ writer = csv.writer(self.stdout, lineterminator="\n")
+                                         
+    labs/post_18_password_hashing/seed.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(LEGACY_PASSWORD.encode())
+           44┆ user.password = hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+                                          
+    labs/post_18_password_hashing/tests.py
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(LEGACY_PASSWORD.encode())
+           63┆ self.password_of("mallory"), hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'carla' is being set without validating the password. Call                          
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password("a fresh passphrase nobody
+              leaked", user=carla): carla.set_password("a fresh passphrase nobody leaked")                      
+          165┆ carla.set_password("a fresh passphrase nobody leaked")
+                                               
+    labs/post_18_password_hashing/views_note.py
+    ❯❱ python.lang.maintainability.is-function-without-parentheses.is-function-without-parentheses
+          ❰❰ Blocking ❱❱
+          Is "is_authenticated" a function or an attribute? If it is a function, you may have meant
+          request.user.is_authenticated() because request.user.is_authenticated is always true.    
+          Details: https://sg.run/oYR7                                                             
+                                                                                                   
+           15┆ if not request.user.is_authenticated:
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           19┆ return HttpResponse(
+           20┆     f"<h1>{escape(request.user.username)}'s notes</h1><ul>{items}</ul>\n"
+           21┆ )
+                                                 
+    labs/post_18_password_hashing/views_secure.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           23┆ @csrf_exempt
+           24┆ @require_POST
+           25┆ def register(request):
+           26┆     username = request.POST.get("username", "")
+           27┆     password = request.POST.get("password", "")
+           28┆     email = request.POST.get("email", "")
+           29┆     if not username or not password:
+           30┆         return HttpResponse("username and password required\n", status=400)
+           31┆     if User.objects.filter(username=username).exists():
+           32┆         return HttpResponse("username taken\n", status=409)
+             [hid 6 additional lines, adjust with --max-lines-per-finding] 
+   
+   ❯❯❱ python.django.security.passwords.use-none-for-password-default.use-none-for-password-default
+          ❰❰ Blocking ❱❱
+          'password' is using the empty string as its default and is being used to set the password on 'user'.
+          If you meant to set an unusable password, set the default value to 'None' or call                   
+          'set_unusable_password()'.                                                                          
+          Details: https://sg.run/zvBW                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ None
+           27┆ password = request.POST.get("password", "")
+   
+    ❯❱ python.django.security.audit.unvalidated-password.unvalidated-password
+          ❰❰ Blocking ❱❱
+          The password on 'user' is being set without validating the password. Call                           
+          django.contrib.auth.password_validation.validate_password() with validation functions before setting
+          the password. See https://docs.djangoproject.com/en/3.0/topics/auth/passwords/ for more information.
+          Details: https://sg.run/OPBL                                                                        
+                                                                                                              
+           ▶▶┆ Autofix ▶ if django.contrib.auth.password_validation.validate_password(password, user=user):
+              user.set_password(password)                                                                  
+           35┆ user.set_password(password)
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           38┆ return HttpResponse(f"registered {user.username} (PBKDF2, salted)\n", status=201)
+                                                     
+    labs/post_18_password_hashing/views_vulnerable.py
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           31┆ @csrf_exempt
+           32┆ @require_POST
+           33┆ def register(request):
+           34┆     username = request.POST.get("username", "")
+           35┆     password = request.POST.get("password", "")
+           36┆     email = request.POST.get("email", "")
+           37┆     if not username or not password:
+           38┆         return HttpResponse("username and password required\n", status=400)
+           39┆     if User.objects.filter(username=username).exists():
+           40┆         return HttpResponse("username taken\n", status=409)
+             [hid 8 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1
+          ❰❰ Blocking ❱❱
+          Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is
+          therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.                 
+          Details: https://sg.run/ydYx                                                                     
+                                                                                                           
+           ▶▶┆ Autofix ▶ hashlib.sha256(password.encode())
+           45┆ user.password = hashlib.sha1(password.encode()).hexdigest()
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           48┆ return HttpResponse(f"registered {user.username} (SHA-1, no salt)\n", status=201)
+   
+    ❯❱ python.django.security.audit.csrf-exempt.no-csrf-exempt
+          ❰❰ Blocking ❱❱
+          Detected usage of @csrf_exempt, which indicates that there is no CSRF token set for this route. This
+          could lead to an attacker manipulating the user's account and exfiltration of private data. Instead,
+          create a function without this decorator.                                                           
+          Details: https://sg.run/rd5e                                                                        
+                                                                                                              
+           51┆ @csrf_exempt
+           52┆ @require_POST
+           53┆ def login(request):
+           54┆     user = SHA1Backend().authenticate(
+           55┆         request,
+           56┆         username=request.POST.get("username", ""),
+           57┆         password=request.POST.get("password", ""),
+           58┆     )
+           59┆     if user is None:
+           60┆         return HttpResponse("invalid credentials\n", status=401)
+             [hid 5 additional lines, adjust with --max-lines-per-finding] 
+   
+    ❯❱ python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse
+          ❰❰ Blocking ❱❱
+          Detected data rendered directly to the end user via 'HttpResponse' or a similar object. This
+          bypasses Django's built-in cross-site scripting (XSS) defenses and could result in an XSS   
+          vulnerability. Use Django's template engine to safely render HTML.                          
+          Details: https://sg.run/EknN                                                                
+                                                                                                      
+           65┆ return HttpResponse(f"logged in as {user.username}\n")
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 19 (19 blocking)
+ • Rules run: 372
+ • Targets scanned: 21
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 372 rules on 21 files: 19 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+
+
+$ for c in p/django p/python p/owasp-top-ten r/python.django r/python; do python - "$c" <<PY ... PY; done
+# The script, run once per config (fetches the config the scans above used):
+#   import re, sys, urllib.request
+#   c = sys.argv[1]
+#   t = urllib.request.urlopen("https://semgrep.dev/c/" + c).read().decode()
+#   blocks = re.split(r"(?m)^- id: ", t)[1:]
+#   ids = lambda pat: sorted({b.split()[0].rsplit(".", 1)[-1] for b in blocks if re.search(pat, b)})
+#   store = ids(r"\.password\s*=|make_password|PASSWORD_HASHERS|PasswordHasher|check_password")
+#   setpw = ids(r"set_password")
+#   print(f"{c}: {len(blocks)} rules; storage terms: {store or 0}; set_password: {setpw}")
+p/django: 28 rules; storage terms: 0; set_password: ['password-empty-string', 'use-none-for-password-default']
+p/python: 151 rules; storage terms: 0; set_password: ['password-empty-string', 'use-none-for-password-default']
+p/owasp-top-ten: 559 rules; storage terms: 0; set_password: ['password-empty-string', 'use-none-for-password-default']
+r/python.django: 79 rules; storage terms: 0; set_password: ['password-empty-string', 'unvalidated-password', 'use-none-for-password-default']
+r/python: 378 rules; storage terms: 0; set_password: ['password-empty-string', 'unvalidated-password', 'use-none-for-password-default']

@@ -56,7 +56,7 @@ jobs:
       # its steps below: Lab 01 (SQLi), Lab 04 (command injection), Lab 08 (CSRF,
       # via Semgrep's audit tier), Lab 16 (JWT). Labs the standard tools MISS or can't-distinguish
       # ship a custom rule and are asserted — and documented — in the custom-rules
-      # job below (02, 03, 05, 06, 07, 09, 10, 14, 15). Lab 11 (brute force) has no static signal in
+      # job below (02, 03, 05, 06, 07, 09, 10, 14, 15, 17, 18). Lab 11 (brute force) has no static signal in
       # any tier: it is gated by tests.py plus a dynamic curl probe (see its scans/).
       # Lab 15 (MFA) carries no assert here either: the defect is @login_required
       # where @otp_required belonged, curated packs are 0/180 and the audit tier
@@ -187,6 +187,13 @@ jobs:
       #     labs/post_15_mfa/rules/mfa.yaml names the MFA-protected models and flags
       #     a @login_required view without @otp_required that reads one, plus an
       #     INFO inventory of every login() call (the session-minting side doors).
+      #   Lab 18 (password hashing) — miss, behind a name match: Bandit B324 and
+      #     Semgrep's insecure-hash-algorithm-sha1 fire on hashlib.sha1 wherever
+      #     it is, the fix's wrapped hasher included, and the same vulnerable line
+      #     with sha256/sha3_256/blake2b draws nothing from either. No rule in any
+      #     tier looks at where a password digest is stored.
+      #     rules/password_hashing.yaml is a taint rule from a hashlib/hmac digest
+      #     to a stored or compared .password.
       # (Labs the standard tools DO catch are asserted in the sast job: 01 SQLi,
       # 04 command injection and 16 JWT directly, 08 CSRF via Semgrep's audit tier. Lab 11
       # brute force ships NO rule — a forgeable key + a missing control, unmatchable
@@ -308,6 +315,17 @@ jobs:
           semgrep scan --config rules/oauth2.yaml --json --quiet \
             labs/post_17_oauth2/views_secure.py > rule_oauth2_secure.json
           python -c "import json,sys; n=len(json.load(open('rule_oauth2_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
+
+      # Lab 18 (password hashing) — the standard tools match the algorithm's name,
+      # so this rule keys on a hashlib/hmac digest reaching User.password instead.
+      - name: Password-hashing rule fires on the vulnerable view
+        run: |
+          semgrep scan --config rules/password_hashing.yaml --json --quiet             labs/post_18_password_hashing/views_vulnerable.py > rule_ph_vuln.json
+          python -c "import json,sys; n=len(json.load(open('rule_ph_vuln.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n >= 1 else 1)"
+      - name: Password-hashing rule is silent on the secure view
+        run: |
+          semgrep scan --config rules/password_hashing.yaml --json --quiet             labs/post_18_password_hashing/views_secure.py > rule_ph_secure.json
+          python -c "import json,sys; n=len(json.load(open('rule_ph_secure.json'))['results']); print('custom-rule findings:', n); sys.exit(0 if n == 0 else 1)"
 
       # Lab 15 (MFA) — a policy rule, kept inside its lab because the policy (which
       # models need a second factor) belongs to that lab's code. Same two checks as

@@ -1,0 +1,168 @@
+# ============================================================================
+# SAST evidence - the standard tools vs the same defect with another algorithm
+#
+# Commands: four one-line edits of views_vulnerable.py into /tmp (sed, printed
+# below), each scanned with Bandit and with all five Semgrep configs; then the
+# custom rule over the four.
+#
+# Tools: Bandit 1.9.4, Semgrep 1.170.0  |  Captured: 2026-10-31
+# Result: THE STANDARD TOOLS KEY ON THE NAME, NOT ON THE DEFECT.
+#         sha256 / sha3_256 / blake2b: Bandit "No issues identified"; Semgrep's
+#         five configs report only the CSRF and inline-HTML conventions (lines
+#         31, 48, 51, 65), nothing on line 45. Every one of these is as fast as
+#         SHA-1 and stored with no salt, so the table cracks the same way.
+#         sha1(..., usedforsecurity=False), the change B324's message suggests:
+#         Bandit goes silent; Semgrep's insecure-hash-algorithm-sha1 still fires
+#         (its pattern ignores the keyword).
+#         The custom rule rules/password_hashing.yaml flags line 45 in all four.
+#
+# Captured in a python:3.13-slim container (pip install bandit==1.9.4
+# semgrep==1.170.0, the CI pins) with the repository mounted read-only; the
+# variants live in the container's /tmp and are reproducible from a clone with
+# the sed lines below. Output below is unedited, except that each Bandit run is
+# cut to its "Test results" block.
+# ============================================================================
+
+$ sed 's/hashlib\.sha1(password\.encode())/hashlib.sha256(password.encode())/' labs/post_18_password_hashing/views_vulnerable.py > /tmp/v/sha256.py
+$ sed 's/hashlib\.sha1(password\.encode())/hashlib.sha3_256(password.encode())/' labs/post_18_password_hashing/views_vulnerable.py > /tmp/v/sha3_256.py
+$ sed 's/hashlib\.sha1(password\.encode())/hashlib.blake2b(password.encode())/' labs/post_18_password_hashing/views_vulnerable.py > /tmp/v/blake2b.py
+$ sed 's/hashlib\.sha1(password\.encode())/hashlib.sha1(password.encode(), usedforsecurity=False)/' labs/post_18_password_hashing/views_vulnerable.py > /tmp/v/sha1_usedforsecurity_false.py
+$ grep -n "user.password = " /tmp/v/*.py
+/tmp/v/blake2b.py:45:    user.password = hashlib.blake2b(password.encode()).hexdigest()
+/tmp/v/sha1_usedforsecurity_false.py:45:    user.password = hashlib.sha1(password.encode(), usedforsecurity=False).hexdigest()
+/tmp/v/sha256.py:45:    user.password = hashlib.sha256(password.encode()).hexdigest()
+/tmp/v/sha3_256.py:45:    user.password = hashlib.sha3_256(password.encode()).hexdigest()
+
+$ bandit /tmp/v/sha256.py
+Test results:
+	No issues identified.
+
+Code scanned:
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python --json /tmp/v/sha256.py | <rule id, line>
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 31
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 48
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 51
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 65
+
+$ bandit /tmp/v/sha3_256.py
+Test results:
+	No issues identified.
+
+Code scanned:
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python --json /tmp/v/sha3_256.py | <rule id, line>
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 31
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 48
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 51
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 65
+
+$ bandit /tmp/v/blake2b.py
+Test results:
+	No issues identified.
+
+Code scanned:
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python --json /tmp/v/blake2b.py | <rule id, line>
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 31
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 48
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 51
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 65
+
+$ bandit /tmp/v/sha1_usedforsecurity_false.py
+Test results:
+	No issues identified.
+
+Code scanned:
+$ semgrep scan --config p/django --config p/python --config p/owasp-top-ten --config r/python.django --config r/python --json /tmp/v/sha1_usedforsecurity_false.py | <rule id, line>
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 31
+   python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1 line 45
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 48
+   python.django.security.audit.csrf-exempt.no-csrf-exempt line 51
+   python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse line 65
+
+$ semgrep scan --config rules/password_hashing.yaml /tmp/v/
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 4 files tracked by git with 1 Code rule:
+  Scanning 4 files.
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 4 (4 blocking)
+ • Rules run: 1
+ • Targets scanned: 4
+ • Parsed lines: ~100.0%
+ • No ignore information available
+Ran 1 rule on 4 files: 4 findings.
+
+A new version of Semgrep is available. See https://semgrep.dev/docs/upgrading
+                   
+                   
+┌─────────────────┐
+│ 4 Code Findings │
+└─────────────────┘
+                     
+    /tmp/v/blake2b.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.blake2b(password.encode()).hexdigest()
+                                        
+    /tmp/v/sha1_usedforsecurity_false.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.sha1(password.encode(), usedforsecurity=False).hexdigest()
+                    
+    /tmp/v/sha256.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.sha256(password.encode()).hexdigest()
+                      
+    /tmp/v/sha3_256.py
+   ❯❯❱ rules.thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+          ❰❰ Blocking ❱❱
+          A password is stored, or checked, as a digest computed with hashlib or hmac rather than through     
+          Django's hasher. A general-purpose hash is built to be fast, so once the table leaks every guess    
+          costs one hash; without a per-row salt the same password gives the same value in every row, and each
+          guess is checked against all of them at once. The algorithm is not the problem: SHA-256 or BLAKE2   
+          fail the same way as SHA-1. Store passwords with user.set_password() (or make_password()), which    
+          uses the first entry of PASSWORD_HASHERS, a per-row salt and a work factor, and check them with     
+          user.check_password(). Rows already stored this way can be wrapped in PBKDF2 by a data migration    
+          without knowing a password, but a table that has already leaked is cracked anyway: reset those      
+          passwords.                                                                                          
+                                                                                                              
+           45┆ user.password = hashlib.sha3_256(password.encode()).hexdigest()
+

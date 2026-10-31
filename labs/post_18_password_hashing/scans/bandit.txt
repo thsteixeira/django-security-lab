@@ -1,0 +1,149 @@
+# ============================================================================
+# SAST evidence - Bandit vs Lab 18
+#
+# Command:
+#   bandit -r labs/post_18_password_hashing/
+#
+# Tool: Bandit 1.9.4  |  Captured: 2026-10-31
+# Result: FIRES ON THE VULNERABLE VIEW - FOR THE ALGORITHM'S NAME. 9 findings:
+#         B324 (hashlib, "Use of weak SHA1 hash for security", High/High) x7 and
+#         B105 (hardcoded_password_string, Low) x2.
+#           - views_vulnerable.py:45 - the defect, user.password = hashlib.sha1(...);
+#             views_secure.py draws nothing.
+#           - B324 also lands on every other sha1 call in the module, whatever
+#             it is for: the SHA1Backend comparison (backends.py:24, the same
+#             mistake's login half), the legacy seed (seed.py:44), a test
+#             (tests.py:63), the attacker's cracker (crack.py:75, :86) and the
+#             fix's own wrapped hasher (hashers.py:28), which must SHA-1 the
+#             password to reach the old digest.
+#           - B105 x2: LEGACY_PASSWORD = "october12" in seed.py (fair, a lab
+#             constant) and "password": None in crack.py's result dict (a false
+#             positive on a key name).
+#         B324 matches hashlib.sha1/md5 (and hashlib.new with those names)
+#         unless usedforsecurity=False is passed. Swap sha1 for sha256, sha3_256
+#         or blake2b, or add usedforsecurity=False as its message suggests, and
+#         it reports nothing on a line exactly as crackable - see
+#         fast-hash-variants.txt.
+#
+# Captured in a python:3.13-slim container (pip install bandit==1.9.4, the CI
+# pin) with the repository mounted read-only; paths are relative to the repo
+# root, so nothing needed normalising. Output below is unedited.
+# ============================================================================
+
+$ bandit -r labs/post_18_password_hashing/
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.15
+Run started:2026-10-31 00:40:54.901313+00:00
+
+Test results:
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/backends.py:24:37
+23	        user = User.objects.filter(username=username).first()
+24	        if user and user.password == hashlib.sha1(password.encode()).hexdigest():
+25	            return user
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/crack.py:75:17
+74	        guesses += 1
+75	        digest = hashlib.sha1(guess.encode()).hexdigest()
+76	        if digest in remaining:
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/crack.py:86:16
+85	        # The wrapped row is PBKDF2 over the old digest, so a guess goes through both.
+86	        guess = hashlib.sha1(guess.encode()).hexdigest()
+87	    derived = hashlib.pbkdf2_hmac("sha256", guess.encode(), salt.encode(), int(iterations))
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'None'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_18_password_hashing/crack.py:103:12
+102	            break
+103	    return {"password": None, "guesses": guesses, "seconds": time.perf_counter() - start}
+104	
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/hashers.py:28:20
+27	    def encode(self, password, salt, iterations=None):
+28	        sha1_hash = hashlib.sha1(password.encode()).hexdigest()
+29	        return self.encode_sha1_hash(sha1_hash, salt, iterations)
+
+--------------------------------------------------
+>> Issue: [B105:hardcoded_password_string] Possible hardcoded password: 'october12'
+   Severity: Low   Confidence: Medium
+   CWE: CWE-259 (https://cwe.mitre.org/data/definitions/259.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html
+   Location: labs/post_18_password_hashing/seed.py:27:18
+26	
+27	LEGACY_PASSWORD = "october12"
+28	
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/seed.py:44:24
+43	        # Exactly what views_vulnerable.register() does.
+44	        user.password = hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+45	        user.save()
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/tests.py:63:41
+62	        self.assertEqual(
+63	            self.password_of("mallory"), hashlib.sha1(LEGACY_PASSWORD.encode()).hexdigest()
+64	        )
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak SHA1 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b324_hashlib.html
+   Location: labs/post_18_password_hashing/views_vulnerable.py:45:20
+44	    # characters in every row, and in every other table that ever used SHA-1.
+45	    user.password = hashlib.sha1(password.encode()).hexdigest()
+46	    user.save()
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 558
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 2
+		Medium: 0
+		High: 7
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 2
+		High: 7
+Files skipped (0):
