@@ -4,8 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **Runnable Django labs for the OWASP Top 10, each scanned with the off-the-shelf
-tools a security analyst actually runs — Bandit and Semgrep (SAST), sqlmap / OWASP
-ZAP (DAST, where the class fits), pip-audit (SCA) — green in CI on every commit.**
+tools a security analyst actually runs — Bandit and Semgrep (SAST) and pip-audit
+(SCA), green in CI on every commit, plus a captured sqlmap run (DAST) where the
+class fits.**
 
 This is the companion repository for
 **[Secure by Design](https://thiagoteixeira.tech/series/secure-by-design/)** — a
@@ -26,7 +27,7 @@ detection, `manage.py test` as the gate. No browser required.
 ## Why this exists
 
 A Django-5.x security lab mapped to OWASP / CWE / ASVS, with reproducible
-SAST/DAST/SCA playbooks and a green CI pipeline, **did not exist**. The
+SAST and SCA playbooks (DAST where the class fits) and a green CI pipeline, **did not exist**. The
 alternatives are dated or off-platform: django.nV is pinned to old Django, DVWA
 is PHP, Juice Shop is Node, WebGoat is Java. This repo fills that gap for the
 Python/Django ecosystem — a lab you clone and scan with the tools you already

@@ -33,10 +33,13 @@ labs/post_NN_foo/README.md             teaching doc: exploit, fix, OWASP/CWE/ASV
    bandit -r labs/post_NN_foo/                       # SAST
    semgrep scan --config p/django labs/post_NN_foo/  # SAST (community packs)
    pip-audit -r requirements.txt                     # SCA (component/CVE posts)
-   sqlmap -u '.../foo/vulnerable/?param=1' --batch   # DAST (runtime classes)
+   sqlmap -u '.../foo/vulnerable/?param=1' --batch   # DAST (runtime classes; see below)
    ```
    Show the exact commands, what each tool caught, and what it missed. Real
    captured output only — never hypothetical, never ad-hoc scenario files.
+   Capture a DAST run only where it adds something the `curl` walkthrough and
+   `tests.py` do not: so far that is Lab 01 (sqlmap). Most labs record in their
+   `scans/README.md` why they have none.
 3. **Wire the CI assert** for classes the SAST tools catch: fire on
    `views_vulnerable.py`, silent on `views_secure.py`. DAST-only classes carry no
    SAST assert — their gate is the Django `tests.py`. DAST is captured in the
