@@ -87,6 +87,18 @@ def bulk_reset(password):
     User.objects.filter(is_active=False).update(password=hashlib.sha1(password.encode()).hexdigest())
 
 
+def built_with_it(username, password):
+    # ruleid: thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+    user = User(username=username, password=hashlib.sha256(password.encode()).hexdigest())
+    user.save()
+
+
+def a_string_encode_is_not_a_hasher(user, password):
+    digest = hashlib.sha256(password.encode()).hexdigest()
+    # ruleid: thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+    user.password = digest.encode("ascii", "strict").decode()
+
+
 def through_make_password(user, password):
     # ok: thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
     user.password = make_password(password)
@@ -97,6 +109,12 @@ def wrapped_by_hand(user):
     hasher = get_hasher("pbkdf2_wrapped_sha1")
     # ok: thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
     user.password = hasher.encode_sha1_hash(user.password, hasher.salt())
+
+
+def wrapped_inline(user, password):
+    hasher = get_hasher("pbkdf2_sha256")
+    # ok: thiagoteixeira.django.security.password_hashing.password-stored-as-a-fast-digest
+    user.password = hasher.encode(hashlib.sha1(password.encode()).hexdigest(), hasher.salt())
 
 
 def wrapped_with_make_password(user, password):

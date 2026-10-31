@@ -1,7 +1,7 @@
 # Lab 18 — Weak Password Hashing
 
 Companion lab for the blog post
-**[Weak Password Hashing](https://thiagoteixeira.tech/blog/)** *(link finalised on publication)*.
+**[Weak Password Hashing: Why a Leaked SHA-1 Table Cracks in Milliseconds](https://thiagoteixeira.tech/blog/weak-password-hashing-why-a-leaked-sha-1-table-cracks-in-milliseconds/)**.
 
 | | |
 |---|---|

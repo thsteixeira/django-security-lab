@@ -108,9 +108,12 @@ happens to say `sha1`.
 rule. Its sources are hashlib's digest constructors (any algorithm, and
 `hashlib.new`) and `hmac`. Its sinks are the places a password value is written or
 compared: an assignment to `.password`, a `password=` keyword in a model's
-`create()` or a queryset's `update()`, and an equality test against `.password`.
-`make_password()` and a hasher's `encode()` sanitise, because a digest wrapped in
-PBKDF2 is the documented upgrade path. Taint, because the digest often goes through
+constructor (`User(...)`), its `create()` or a queryset's `update()`, and an
+equality test against `.password`. `make_password()` and a hasher's `encode()`
+sanitise, because a digest wrapped in PBKDF2 is the documented upgrade path. The
+hasher is recognised by name — `get_hasher(...)`, or a receiver whose name ends in
+`hasher` — so `digest.encode("ascii", "strict")`, an ordinary string method with
+two arguments, does not clear the taint (a fixture `ruleid` line holds that). Taint, because the digest often goes through
 a local first (`digest = hashlib.sha256(...).hexdigest()`).
 
 ```bash
@@ -148,8 +151,8 @@ hash is enough when nobody can guess the input, but the rule cannot see where th
 hashed value came from.
 
 `semgrep --test` does not check `todo` lines, so a JSON scan of the fixture confirms
-them: it flags lines 23, 36, 48, 53, 59, 64, 70, 77, 82 and 87 (the ten `ruleid`
-lines) and 147 (the `todook` line), and none of the four `todoruleid` lines (122,
-129, 134, 140).
+them: it flags lines 23, 36, 48, 53, 59, 64, 70, 77, 82, 87, 92 and 99 (the twelve
+`ruleid` lines) and 165 (the `todook` line), and none of the four `todoruleid` lines
+(140, 147, 152, 158).
 
 CI asserts the split in the hermetic custom-rules job.

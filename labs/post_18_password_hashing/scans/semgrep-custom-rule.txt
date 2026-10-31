@@ -17,11 +17,11 @@
 #         views_vulnerable.py:45, backends.py:24 and seed.py:44 (the seed writes
 #         the legacy rows exactly as the vulnerable view does). CI asserts the
 #         split in the hermetic custom-rules job.
-#         A JSON scan of the fixture flags lines 23, 36, 48, 53, 59, 64, 70, 77, 82
-#         and 87 - exactly the ten `ruleid` lines - plus 147, the one `todook`
-#         line (an API-key digest in a field named password), and none of the four
-#         `todoruleid` lines (122, 129, 134, 140: another field name, raw SQL,
-#         passlib's md5_crypt, a one-iteration pbkdf2_hmac). `semgrep --test` does
+#         A JSON scan of the fixture flags lines 23, 36, 48, 53, 59, 64, 70, 77, 82,
+#         87, 92 and 99 - exactly the twelve `ruleid` lines - plus 165, the one
+#         `todook` line (an API-key digest in a field named password), and none of
+#         the four `todoruleid` lines (140, 147, 152, 158: another field name, raw
+#         SQL, passlib's md5_crypt, a one-iteration pbkdf2_hmac). `semgrep --test` does
 #         not check todo lines, so that JSON scan is what confirms them.
 #
 # Captured in a python:3.13-slim container (pip install semgrep==1.170.0, the
@@ -209,7 +209,7 @@ $ semgrep scan --config rules/password_hashing.yaml labs/
 ┌─────────────┐
 │ Scan Status │
 └─────────────┘
-  Scanning 465 files tracked by git with 1 Code rule:
+  Scanning 473 files tracked by git with 1 Code rule:
   Scanning 218 files.
                 
                 
